@@ -11,13 +11,5 @@
       "src": "/(.*)",
       "dest": "app.py"
     }
-  ],
-  "env": {
-    "PYTHONPATH": "/var/task"
-  },
-  "functions": {
-    "app.py": {
-      "runtime": "python3.9"
-    }
-  }
+  ]
 }

@@ -1,0 +1,192 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 10px;
+    background: #f8f8f8;
+    font-size: 16px;
+}
+h2 {
+    text-align: center;
+    font-size: 1.8em;
+    margin: 0.5em 0;
+}
+form {
+    margin: 0 auto;
+    max-width: 100vw;
+    padding: 0 10px;
+}
+.ron-box {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    margin-bottom: 18px;
+    padding: 10px 6px 16px 6px;
+}
+.ron-box h3 {
+    text-align: center;
+    margin-top: 0.5em;
+    margin-bottom: 0.7em;
+    font-size: 1.4em;
+    letter-spacing: 1px;
+}
+.scroll-table {
+    overflow-x: auto;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 320px;
+    background: #fff;
+    font-size: 1em;
+}
+th, td {
+    border: 1px solid #ccc;
+    padding: 8px 4px;
+    text-align: left;
+    word-break: break-word;
+}
+th {
+    background: #e0e0e0;
+    font-size: 0.95em;
+    white-space: nowrap;
+}
+.total-row td {
+    background: #f0f8ff;
+    font-weight: bold;
+    text-align: center;
+}
+select, textarea {
+    width: 100%;
+    font-size: 1em;
+    padding: 6px 4px;
+    border-radius: 4px;
+    border: 1px solid #bbb;
+    box-sizing: border-box;
+}
+select {
+    min-width: 60px;
+}
+.notas {
+    margin: 10px 0;
+}
+.notas label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+.evaluador-info {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f5f5f5;
+    border-radius: 5px;
+}
+.evaluador-info label {
+    font-weight: bold;
+    margin-right: 10px;
+    display: inline-block;
+    margin-bottom: 5px;
+}
+.evaluador-info input {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    width: 100%;
+    max-width: 300px;
+    font-size: 1em;
+}
+.calcular-btn {
+    margin-top: 10px;
+    padding: 10px 15px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1em;
+    width: 100%;
+    max-width: 200px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+.calcular-btn:hover {
+    background-color: #45a049;
+}
+@media (max-width: 768px) {
+    body {
+        font-size: 14px;
+    }
+    h2 {
+        font-size: 1.6em;
+    }
+    .ron-box h3 {
+        font-size: 1.2em;
+    }
+    th, td {
+        padding: 6px 3px;
+    }
+    .evaluador-info {
+        padding: 10px;
+    }
+    .evaluador-info input {
+        max-width: 100%;
+    }
+}
+@media (max-width: 480px) {
+    body {
+        font-size: 13px;
+    }
+    h2 {
+        font-size: 1.4em;
+    }
+    .ron-box {
+        padding: 8px 4px 12px 4px;
+    }
+    .ron-box h3 {
+        font-size: 1.1em;
+    }
+    th, td {
+        padding: 4px 2px;
+        font-size: 0.95em;
+    }
+    select, textarea {
+        font-size: 0.95em;
+        padding: 4px 2px;
+    }
+    .calcular-btn {
+        padding: 8px 12px;
+        font-size: 0.95em;
+    }
+    .evaluador-info {
+        padding: 8px;
+    }
+    .evaluador-info label {
+        display: block;
+        margin-bottom: 5px;
+    }
+}
+@media (max-width: 320px) {
+    body {
+        font-size: 12px;
+    }
+    h2 {
+        font-size: 1.3em;
+    }
+    .ron-box h3 {
+        font-size: 1em;
+    }
+    th, td {
+        padding: 3px 1px;
+        font-size: 0.9em;
+    }
+    select, textarea {
+        font-size: 0.9em;
+        padding: 3px 1px;
+    }
+    .calcular-btn {
+        padding: 6px 10px;
+        font-size: 0.9em;
+    }
+} 

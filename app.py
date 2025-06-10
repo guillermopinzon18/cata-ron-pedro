@@ -1,11 +1,11 @@
-from flask import Flask, render_template, request
-from flask_socketio import SocketIO, emit, join_room, leave_room
+from flask import Flask, render_template, request, jsonify, session
 import uuid
+import json
+import os
 from datetime import datetime
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'tu_clave_secreta_aqui'
-socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Puntuaciones fijas por criterio
 PUNTAJES = {
@@ -20,66 +20,96 @@ PUNTAJES = {
 
 RONES = ["A", "B", "C", "D"]
 
-# Almacenamiento temporal de datos de la sesión
-session_data = {
-    "current_step": 0,  # 0: inicio, 1-4: rones A-D, 5: resumen final
-    "users": {},  # {user_id: {nombre, evaluaciones: {}, notas: ""}}
-    "master_control": None  # ID del usuario que controla la navegación
-}
+# Almacenamiento temporal de datos (en producción usarías una base de datos)
+# Por ahora usamos archivos temporales
+DATA_FILE = '/tmp/cata_data.json'
+
+def load_session_data():
+    """Cargar datos de la sesión desde archivo temporal"""
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            pass
+    return {
+        "current_step": 0,
+        "users": {},
+        "master_control": None
+    }
+
+def save_session_data(data):
+    """Guardar datos de la sesión en archivo temporal"""
+    try:
+        with open(DATA_FILE, 'w') as f:
+            json.dump(data, f)
+    except:
+        pass
 
 @app.route("/")
 def index():
+    if 'user_id' not in session:
+        session['user_id'] = str(uuid.uuid4())
+    
+    session_data = load_session_data()
+    
+    # Si es el primer usuario, se convierte en master
+    if not session_data["master_control"]:
+        session_data["master_control"] = session['user_id']
+        save_session_data(session_data)
+    
+    is_master = session['user_id'] == session_data["master_control"]
+    
     return render_template("index.html", 
                          puntajes=PUNTAJES, 
                          rones=RONES, 
                          current_step=session_data["current_step"],
-                         users_data=session_data["users"])
+                         users_data=session_data["users"],
+                         user_id=session['user_id'],
+                         is_master=is_master)
 
-@socketio.on('connect')
-def on_connect():
-    user_id = str(uuid.uuid4())
-    session_data["users"][user_id] = {
-        "nombre": "",
-        "evaluaciones": {},
-        "notas": "",
-        "connected_at": datetime.now().isoformat()
-    }
+@app.route("/api/set_name", methods=["POST"])
+def set_name():
+    data = request.get_json()
+    user_id = session.get('user_id')
+    nombre = data.get('nombre')
     
-    # Si es el primer usuario, se convierte en master
-    if session_data["master_control"] is None:
-        session_data["master_control"] = user_id
-        emit('master_status', {'is_master': True})
-    else:
-        emit('master_status', {'is_master': False})
-    
-    emit('user_id', {'user_id': user_id})
-    emit('step_update', {'current_step': session_data["current_step"]})
-    emit('users_update', {'users': session_data["users"]})
-
-@socketio.on('disconnect')
-def on_disconnect():
-    # Limpiar usuario desconectado
-    pass
-
-@socketio.on('set_name')
-def handle_set_name(data):
-    user_id = data['user_id']
-    nombre = data['nombre']
-    
-    if user_id in session_data["users"]:
+    if user_id and nombre:
+        session_data = load_session_data()
+        
+        if user_id not in session_data["users"]:
+            session_data["users"][user_id] = {
+                "nombre": "",
+                "evaluaciones": {},
+                "notas": "",
+                "connected_at": datetime.now().isoformat()
+            }
+        
         session_data["users"][user_id]["nombre"] = nombre
-        socketio.emit('users_update', {'users': session_data["users"]})
+        save_session_data(session_data)
+        
+        return jsonify({"status": "success"})
+    
+    return jsonify({"status": "error"}), 400
 
-@socketio.on('submit_evaluation')
-def handle_evaluation(data):
-    user_id = data['user_id']
-    ron = data['ron']
-    evaluacion = data['evaluacion']
+@app.route("/api/submit_evaluation", methods=["POST"])
+def submit_evaluation():
+    data = request.get_json()
+    user_id = session.get('user_id')
+    ron = data.get('ron')
+    evaluacion = data.get('evaluacion')
     notas = data.get('notas', '')
     
-    if user_id in session_data["users"]:
-        if 'evaluaciones' not in session_data["users"][user_id]:
-            session_data["users"][user_id]["evaluaciones"] = {}
+    if user_id and ron and evaluacion:
+        session_data = load_session_data()
+        
+        if user_id not in session_data["users"]:
+            session_data["users"][user_id] = {
+                "nombre": "",
+                "evaluaciones": {},
+                "notas": "",
+                "connected_at": datetime.now().isoformat()
+            }
         
         # Calcular total
         total = sum(evaluacion.values())
@@ -87,34 +117,67 @@ def handle_evaluation(data):
         
         session_data["users"][user_id]["evaluaciones"][ron] = evaluacion
         session_data["users"][user_id]["notas"] = notas
+        save_session_data(session_data)
         
-        socketio.emit('users_update', {'users': session_data["users"]})
+        return jsonify({"status": "success"})
+    
+    return jsonify({"status": "error"}), 400
 
-@socketio.on('next_step')
-def handle_next_step(data):
-    user_id = data['user_id']
+@app.route("/api/next_step", methods=["POST"])
+def next_step():
+    user_id = session.get('user_id')
+    session_data = load_session_data()
     
     # Solo el master puede cambiar de paso
     if user_id == session_data["master_control"] and session_data["current_step"] < 5:
         session_data["current_step"] += 1
-        socketio.emit('step_update', {'current_step': session_data["current_step"]})
+        save_session_data(session_data)
+        return jsonify({"status": "success", "current_step": session_data["current_step"]})
+    
+    return jsonify({"status": "error"}), 403
 
-@socketio.on('prev_step')
-def handle_prev_step(data):
-    user_id = data['user_id']
+@app.route("/api/prev_step", methods=["POST"])
+def prev_step():
+    user_id = session.get('user_id')
+    session_data = load_session_data()
     
     # Solo el master puede cambiar de paso
     if user_id == session_data["master_control"] and session_data["current_step"] > 0:
         session_data["current_step"] -= 1
-        socketio.emit('step_update', {'current_step': session_data["current_step"]})
+        save_session_data(session_data)
+        return jsonify({"status": "success", "current_step": session_data["current_step"]})
+    
+    return jsonify({"status": "error"}), 403
 
-@socketio.on('reset_session')
-def handle_reset():
-    session_data["current_step"] = 0
-    session_data["users"] = {}
-    session_data["master_control"] = None
-    socketio.emit('session_reset')
+@app.route("/api/reset_session", methods=["POST"])
+def reset_session():
+    user_id = session.get('user_id')
+    session_data = load_session_data()
+    
+    # Solo el master puede resetear
+    if user_id == session_data["master_control"]:
+        new_data = {
+            "current_step": 0,
+            "users": {},
+            "master_control": user_id
+        }
+        save_session_data(new_data)
+        return jsonify({"status": "success"})
+    
+    return jsonify({"status": "error"}), 403
+
+@app.route("/api/get_data")
+def get_data():
+    session_data = load_session_data()
+    user_id = session.get('user_id')
+    is_master = user_id == session_data["master_control"]
+    
+    return jsonify({
+        "current_step": session_data["current_step"],
+        "users": session_data["users"],
+        "is_master": is_master
+    })
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
+    app.run(debug=True)
 

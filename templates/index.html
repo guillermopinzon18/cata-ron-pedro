@@ -5,12 +5,11 @@
     <title>Cata Colaborativa de Ron</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 </head>
 <body>
     <div id="loading-screen" class="loading-screen">
         <div class="loading-content">
-            <h2>Conectando...</h2>
+            <h2>Cargando Cata...</h2>
             <div class="spinner"></div>
         </div>
     </div>
@@ -21,337 +20,375 @@
         <!-- Datos ocultos para JavaScript -->
         <script type="application/json" id="rones-data">{{ rones | tojson }}</script>
         <script type="application/json" id="puntajes-data">{{ puntajes | tojson }}</script>
+        <script type="application/json" id="user-data">{{ {"user_id": user_id, "is_master": is_master} | tojson }}</script>
+        <script type="application/json" id="initial-data">{{ {"current_step": current_step, "users": users_data} | tojson }}</script>
         
         <!-- Panel de control del master -->
-        <div id="master-controls" style="display: none;" class="master-controls">
-            <div class="control-buttons">
-                <button id="prev-btn" onclick="previousStep()" class="nav-btn" disabled>⬅ Anterior</button>
-                <span id="step-indicator" class="step-indicator">Paso 0 de 5</span>
-                <button id="next-btn" onclick="nextStep()" class="nav-btn">Siguiente ➡</button>
-            </div>
-            <button onclick="resetSession()" class="reset-btn">🔄 Reiniciar Sesión</button>
-        </div>
-
-        <!-- Paso 0: Bienvenida y nombre -->
-        <div id="step-0" class="step-content">
-            <div class="welcome-section">
-                <h3>¡Bienvenido a la Cata Colaborativa!</h3>
-                <p>Ingresa tu nombre para comenzar:</p>
-                <div class="name-input-section">
-                    <input type="text" id="user-name" placeholder="Tu nombre y apellido" maxlength="50">
-                    <button onclick="setUserName()" class="submit-name-btn">Confirmar Nombre</button>
+        <div id="master-controls" style="display: none;">
+            <div class="control-panel">
+                <h3>🎛️ Control de Cata</h3>
+                <div class="nav-buttons">
+                    <button id="prev-btn" onclick="prevStep()">⬅️ Anterior</button>
+                    <button id="next-btn" onclick="nextStep()">Siguiente ➡️</button>
+                    <button id="reset-btn" onclick="resetSession()" class="reset-btn">🔄 Reiniciar</button>
                 </div>
-                <div id="name-status" class="name-status"></div>
             </div>
         </div>
 
-        <!-- Pasos 1-4: Evaluación de rones -->
-        <div id="step-1" class="step-content" style="display: none;">
-            <div class="current-ron-section">
-                <h3 id="current-ron-title">Ron A</h3>
-                <div id="evaluation-form"></div>
-            </div>
+        <!-- Información del paso actual -->
+        <div id="step-info" class="step-info">
+            <div id="step-title"></div>
+            <div id="step-description"></div>
         </div>
 
-        <div id="step-2" class="step-content" style="display: none;">
-            <div class="current-ron-section">
-                <h3 id="current-ron-title-2">Ron B</h3>
-                <div id="evaluation-form-2"></div>
-            </div>
+        <!-- Panel de participantes -->
+        <div id="participants-panel" class="participants-panel">
+            <h3>👥 Participantes (<span id="participant-count">0</span>)</h3>
+            <div id="participants-list"></div>
         </div>
 
-        <div id="step-3" class="step-content" style="display: none;">
-            <div class="current-ron-section">
-                <h3 id="current-ron-title-3">Ron C</h3>
-                <div id="evaluation-form-3"></div>
+        <!-- Contenido principal por pasos -->
+        <div id="step-content">
+            
+            <!-- Paso 0: Bienvenida -->
+            <div id="step-0" class="step-content" style="display: none;">
+                <div class="welcome-panel">
+                    <h3>¡Bienvenido a la Cata de Ron!</h3>
+                    <p>Por favor ingresa tu nombre para comenzar:</p>
+                    <input type="text" id="user-name" placeholder="Tu nombre" maxlength="20">
+                    <button onclick="setUserName()">Comenzar</button>
+                </div>
             </div>
-        </div>
 
-        <div id="step-4" class="step-content" style="display: none;">
-            <div class="current-ron-section">
-                <h3 id="current-ron-title-4">Ron D</h3>
-                <div id="evaluation-form-4"></div>
+            <!-- Pasos 1-4: Evaluación de rones -->
+            <div id="step-evaluation" class="step-content" style="display: none;">
+                <form id="evaluation-form">
+                    <div class="criteria-grid">
+                        <div class="criteria-row">
+                            <label>Pureza (Cristalina, transparente, sin partículas en suspensión)</label>
+                            <div class="radio-group" data-criteria="pureza"></div>
+                        </div>
+                        
+                        <div class="criteria-row">
+                            <label>Olfato - Intensidad (Intensidad de aromas percibidos)</label>
+                            <div class="radio-group" data-criteria="olfato_intensidad"></div>
+                        </div>
+                        
+                        <div class="criteria-row">
+                            <label>Olfato - Complejidad (Variedad y complejidad de aromas)</label>
+                            <div class="radio-group" data-criteria="olfato_complejidad"></div>
+                        </div>
+                        
+                        <div class="criteria-row">
+                            <label>Gusto - Intensidad (Intensidad de sabores en boca)</label>
+                            <div class="radio-group" data-criteria="gusto_intensidad"></div>
+                        </div>
+                        
+                        <div class="criteria-row">
+                            <label>Gusto - Complejidad (Variedad y complejidad de sabores)</label>
+                            <div class="radio-group" data-criteria="gusto_complejidad"></div>
+                        </div>
+                        
+                        <div class="criteria-row">
+                            <label>Gusto - Persistencia (Duración del sabor después de tragar)</label>
+                            <div class="radio-group" data-criteria="gusto_persistencia"></div>
+                        </div>
+                        
+                        <div class="criteria-row">
+                            <label>Armonía (Equilibrio general entre todos los aspectos)</label>
+                            <div class="radio-group" data-criteria="armonia"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="notes-section">
+                        <label for="notes">Notas adicionales:</label>
+                        <textarea id="notes" placeholder="Describe tus impresiones del ron..."></textarea>
+                    </div>
+                    
+                    <div class="total-score">
+                        <h3>Puntuación Total: <span id="total-score">0</span></h3>
+                    </div>
+                    
+                    <button type="button" onclick="submitEvaluation()">Enviar Evaluación</button>
+                </form>
             </div>
-        </div>
 
-        <!-- Paso 5: Resumen final -->
-        <div id="step-5" class="step-content" style="display: none;">
-            <div class="final-summary">
-                <h3>🏆 Resultados Finales de la Cata</h3>
-                <div id="final-results"></div>
+            <!-- Paso 5: Resumen final -->
+            <div id="step-5" class="step-content" style="display: none;">
+                <div class="final-summary">
+                    <h3>🏆 Resumen Final de la Cata</h3>
+                    <div id="final-rankings"></div>
+                </div>
             </div>
         </div>
 
         <!-- Panel de resultados en tiempo real -->
         <div id="results-panel" class="results-panel">
-            <h4>📊 Resultados en Tiempo Real</h4>
-            <div id="live-results"></div>
-        </div>
-
-        <!-- Panel de participantes -->
-        <div id="participants-panel" class="participants-panel">
-            <h4>👥 Participantes Conectados (<span id="participant-count">0</span>)</h4>
-            <div id="participants-list"></div>
+            <h3>📊 Resultados en Tiempo Real</h3>
+            <div id="current-results"></div>
         </div>
     </div>
 
     <script>
         // Variables globales
-        let socket = io();
         let currentUserId = null;
         let isMaster = false;
         let currentStep = 0;
         let usersData = {};
+        let currentRon = '';
 
         const RONES = JSON.parse(document.getElementById('rones-data').textContent);
         const PUNTAJES = JSON.parse(document.getElementById('puntajes-data').textContent);
+        const USER_DATA = JSON.parse(document.getElementById('user-data').textContent);
+        const INITIAL_DATA = JSON.parse(document.getElementById('initial-data').textContent);
 
-        // Conectar WebSocket
-        socket.on('connect', function() {
-            console.log('Conectado al servidor');
+        // Inicializar aplicación
+        document.addEventListener('DOMContentLoaded', function() {
+            currentUserId = USER_DATA.user_id;
+            isMaster = USER_DATA.is_master;
+            currentStep = INITIAL_DATA.current_step;
+            usersData = INITIAL_DATA.users;
+
+            initializeApp();
+            
+            // Polling para actualizaciones cada 2 segundos
+            setInterval(fetchUpdates, 2000);
         });
 
-        socket.on('user_id', function(data) {
-            currentUserId = data.user_id;
-            console.log('ID de usuario asignado:', currentUserId);
-        });
-
-        socket.on('master_status', function(data) {
-            isMaster = data.is_master;
+        function initializeApp() {
+            setupRadioGroups();
+            updateStepDisplay();
+            updateParticipants();
+            updateResults();
+            
             if (isMaster) {
                 document.getElementById('master-controls').style.display = 'block';
-                console.log('Eres el coordinador de la cata');
             }
-        });
-
-        socket.on('step_update', function(data) {
-            currentStep = data.current_step;
-            updateStepDisplay();
-        });
-
-        socket.on('users_update', function(data) {
-            usersData = data.users;
-            updateParticipants();
-            updateLiveResults();
-        });
-
-        socket.on('session_reset', function() {
-            location.reload();
-        });
-
-        // Función para ocultar loading y mostrar contenido
-        function hideLoading() {
+            
             document.getElementById('loading-screen').style.display = 'none';
             document.getElementById('main-content').style.display = 'block';
         }
 
-        // Inicialización cuando se carga la página
-        setTimeout(hideLoading, 1000);
-
-        function setUserName() {
-            const name = document.getElementById('user-name').value.trim();
-            if (name) {
-                socket.emit('set_name', {
-                    user_id: currentUserId,
-                    nombre: name
+        function setupRadioGroups() {
+            Object.entries(PUNTAJES).forEach(([criteria, values]) => {
+                const container = document.querySelector(`[data-criteria="${criteria}"]`);
+                container.innerHTML = '';
+                
+                values.forEach((value, index) => {
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = criteria;
+                    radio.value = value;
+                    radio.id = `${criteria}_${index}`;
+                    radio.addEventListener('change', updateTotalScore);
+                    
+                    const label = document.createElement('label');
+                    label.htmlFor = `${criteria}_${index}`;
+                    label.textContent = value;
+                    
+                    container.appendChild(radio);
+                    container.appendChild(label);
                 });
-                document.getElementById('name-status').innerHTML = `<span class="success">✓ Nombre confirmado: ${name}</span>`;
-                document.getElementById('user-name').disabled = true;
+            });
+        }
+
+        function updateTotalScore() {
+            let total = 0;
+            Object.keys(PUNTAJES).forEach(criteria => {
+                const selected = document.querySelector(`input[name="${criteria}"]:checked`);
+                if (selected) {
+                    total += parseInt(selected.value);
+                }
+            });
+            document.getElementById('total-score').textContent = total;
+        }
+
+        async function fetchUpdates() {
+            try {
+                const response = await fetch('/api/get_data');
+                const data = await response.json();
+                
+                if (data.current_step !== currentStep) {
+                    currentStep = data.current_step;
+                    updateStepDisplay();
+                }
+                
+                usersData = data.users;
+                updateParticipants();
+                updateResults();
+            } catch (error) {
+                console.error('Error fetching updates:', error);
+            }
+        }
+
+        async function setUserName() {
+            const name = document.getElementById('user-name').value.trim();
+            if (!name) {
+                alert('Por favor ingresa tu nombre');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/set_name', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ nombre: name })
+                });
+
+                if (response.ok) {
+                    await fetchUpdates();
+                } else {
+                    alert('Error al establecer el nombre');
+                }
+            } catch (error) {
+                alert('Error de conexión');
+            }
+        }
+
+        async function submitEvaluation() {
+            const evaluation = {};
+            let allSelected = true;
+
+            Object.keys(PUNTAJES).forEach(criteria => {
+                const selected = document.querySelector(`input[name="${criteria}"]:checked`);
+                if (selected) {
+                    evaluation[criteria] = parseInt(selected.value);
+                } else {
+                    allSelected = false;
+                }
+            });
+
+            if (!allSelected) {
+                alert('Por favor completa todos los criterios');
+                return;
+            }
+
+            const notes = document.getElementById('notes').value;
+
+            try {
+                const response = await fetch('/api/submit_evaluation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        ron: currentRon,
+                        evaluacion: evaluation,
+                        notas: notes
+                    })
+                });
+
+                if (response.ok) {
+                    alert('Evaluación enviada correctamente');
+                    await fetchUpdates();
+                } else {
+                    alert('Error al enviar evaluación');
+                }
+            } catch (error) {
+                alert('Error de conexión');
+            }
+        }
+
+        async function nextStep() {
+            if (!isMaster) return;
+
+            try {
+                const response = await fetch('/api/next_step', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({})
+                });
+
+                if (response.ok) {
+                    await fetchUpdates();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function prevStep() {
+            if (!isMaster) return;
+
+            try {
+                const response = await fetch('/api/prev_step', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({})
+                });
+
+                if (response.ok) {
+                    await fetchUpdates();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function resetSession() {
+            if (!isMaster) return;
+            
+            if (confirm('¿Estás seguro de que quieres reiniciar la sesión? Se perderán todos los datos.')) {
+                try {
+                    const response = await fetch('/api/reset_session', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({})
+                    });
+
+                    if (response.ok) {
+                        location.reload();
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                }
             }
         }
 
         function updateStepDisplay() {
-            // Ocultar todos los pasos
-            for (let i = 0; i <= 5; i++) {
-                const stepElement = document.getElementById(`step-${i}`);
-                if (stepElement) {
-                    stepElement.style.display = 'none';
-                }
+            // Ocultar todos los contenidos de paso
+            document.querySelectorAll('.step-content').forEach(el => {
+                el.style.display = 'none';
+            });
+
+            let stepTitle = '';
+            let stepDescription = '';
+
+            if (currentStep === 0) {
+                document.getElementById('step-0').style.display = 'block';
+                stepTitle = '🎯 Bienvenida';
+                stepDescription = 'Ingresa tu nombre para comenzar la cata';
+            } else if (currentStep >= 1 && currentStep <= 4) {
+                document.getElementById('step-evaluation').style.display = 'block';
+                currentRon = RONES[currentStep - 1];
+                stepTitle = `🥃 Ron ${currentRon}`;
+                stepDescription = `Evalúa el Ron ${currentRon} según los criterios establecidos`;
+                
+                // Resetear formulario
+                document.getElementById('evaluation-form').reset();
+                document.getElementById('total-score').textContent = '0';
+            } else if (currentStep === 5) {
+                document.getElementById('step-5').style.display = 'block';
+                stepTitle = '🏆 Resumen Final';
+                stepDescription = 'Resultados finales de la cata colaborativa';
+                generateFinalSummary();
             }
 
-            // Mostrar paso actual
-            const currentStepElement = document.getElementById(`step-${currentStep}`);
-            if (currentStepElement) {
-                currentStepElement.style.display = 'block';
-            }
-
-            // Actualizar indicador de paso
-            document.getElementById('step-indicator').textContent = `Paso ${currentStep} de 5`;
-
-            // Crear formulario de evaluación si es necesario
-            if (currentStep >= 1 && currentStep <= 4) {
-                createEvaluationForm(currentStep);
-            }
+            document.getElementById('step-title').textContent = stepTitle;
+            document.getElementById('step-description').textContent = stepDescription;
 
             // Actualizar botones de navegación
-            document.getElementById('prev-btn').disabled = currentStep === 0;
-            document.getElementById('next-btn').disabled = currentStep === 5;
-        }
-
-        function createEvaluationForm(step) {
-            const ronIndex = step - 1;
-            const ron = RONES[ronIndex];
-            const formContainer = document.getElementById(`evaluation-form${step > 1 ? '-' + step : ''}`);
-            
-            if (!formContainer) return;
-
-            formContainer.innerHTML = `
-                <div class="scroll-table">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Categoría</th>
-                                <th>Subcriterio</th>
-                                <th>Descripción</th>
-                                <th>Puntaje</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- VISTA -->
-                            <tr>
-                                <td rowspan="1"><b>VISTA</b></td>
-                                <td><b>PUREZA</b></td>
-                                <td>Limpidez, sin partículas</td>
-                                <td>
-                                    <select id="pureza_${ron}">
-                                        ${PUNTAJES.pureza.map(val => `<option value="${val}">${val}</option>`).join('')}
-                                    </select>
-                                </td>
-                            </tr>
-                            <!-- OLFATO -->
-                            <tr>
-                                <td rowspan="2"><b>OLFATO</b></td>
-                                <td><b>INTENSIDAD</b></td>
-                                <td>Fuerza y persistencia del aroma</td>
-                                <td>
-                                    <select id="olfato_intensidad_${ron}">
-                                        ${PUNTAJES.olfato_intensidad.map(val => `<option value="${val}">${val}</option>`).join('')}
-                                    </select>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><b>COMPLEJIDAD</b></td>
-                                <td>Variedad de aromas, elegancia y finura</td>
-                                <td>
-                                    <select id="olfato_complejidad_${ron}">
-                                        ${PUNTAJES.olfato_complejidad.map(val => `<option value="${val}">${val}</option>`).join('')}
-                                    </select>
-                                </td>
-                            </tr>
-                            <!-- GUSTO -->
-                            <tr>
-                                <td rowspan="3"><b>GUSTO</b></td>
-                                <td><b>INTENSIDAD</b></td>
-                                <td>Fuerza de los sabores y primera entrada</td>
-                                <td>
-                                    <select id="gusto_intensidad_${ron}">
-                                        ${PUNTAJES.gusto_intensidad.map(val => `<option value="${val}">${val}</option>`).join('')}
-                                    </select>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><b>COMPLEJIDAD</b></td>
-                                <td>Variedad de sabores, elegancia y finura</td>
-                                <td>
-                                    <select id="gusto_complejidad_${ron}">
-                                        ${PUNTAJES.gusto_complejidad.map(val => `<option value="${val}">${val}</option>`).join('')}
-                                    </select>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><b>PERSISTENCIA</b></td>
-                                <td>Duración de la sensación remanente en la boca</td>
-                                <td>
-                                    <select id="gusto_persistencia_${ron}">
-                                        ${PUNTAJES.gusto_persistencia.map(val => `<option value="${val}">${val}</option>`).join('')}
-                                    </select>
-                                </td>
-                            </tr>
-                            <!-- JUICIO GLOBAL -->
-                            <tr>
-                                <td rowspan="1"><b>JUICIO GLOBAL</b></td>
-                                <td><b>ARMONÍA</b></td>
-                                <td>Apreciación General</td>
-                                <td>
-                                    <select id="armonia_${ron}">
-                                        ${PUNTAJES.armonia.map(val => `<option value="${val}">${val}</option>`).join('')}
-                                    </select>
-                                </td>
-                            </tr>
-                            <!-- TOTAL -->
-                            <tr class="total-row">
-                                <td colspan="3"><b>VALORACIÓN TOTAL</b></td>
-                                <td><b id="total_${ron}">0</b></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="notas-section">
-                    <label for="notas_${ron}">NOTAS DE CATA:</label>
-                    <textarea id="notas_${ron}" rows="3" placeholder="Escribe tus observaciones sobre este ron..."></textarea>
-                </div>
-                <button onclick="submitEvaluation('${ron}')" class="submit-evaluation-btn">💾 Guardar Evaluación del Ron ${ron}</button>
-            `;
-
-            // Agregar listeners para cálculo automático
-            const selects = formContainer.querySelectorAll('select');
-            selects.forEach(select => {
-                select.addEventListener('change', () => calculateTotal(ron));
-            });
-        }
-
-        function calculateTotal(ron) {
-            const criteria = ['pureza', 'olfato_intensidad', 'olfato_complejidad', 'gusto_intensidad', 'gusto_complejidad', 'gusto_persistencia', 'armonia'];
-            let total = 0;
-            
-            criteria.forEach(criterion => {
-                const selectElement = document.getElementById(`${criterion}_${ron}`);
-                if (selectElement) {
-                    total += parseInt(selectElement.value) || 0;
-                }
-            });
-            
-            document.getElementById(`total_${ron}`).textContent = total;
-        }
-
-        function submitEvaluation(ron) {
-            const evaluation = {
-                pureza: parseInt(document.getElementById(`pureza_${ron}`).value),
-                olfato_intensidad: parseInt(document.getElementById(`olfato_intensidad_${ron}`).value),
-                olfato_complejidad: parseInt(document.getElementById(`olfato_complejidad_${ron}`).value),
-                gusto_intensidad: parseInt(document.getElementById(`gusto_intensidad_${ron}`).value),
-                gusto_complejidad: parseInt(document.getElementById(`gusto_complejidad_${ron}`).value),
-                gusto_persistencia: parseInt(document.getElementById(`gusto_persistencia_${ron}`).value),
-                armonia: parseInt(document.getElementById(`armonia_${ron}`).value)
-            };
-
-            const notas = document.getElementById(`notas_${ron}`).value;
-
-            socket.emit('submit_evaluation', {
-                user_id: currentUserId,
-                ron: ron,
-                evaluacion: evaluation,
-                notas: notas
-            });
-
-            alert(`✅ Evaluación del Ron ${ron} guardada correctamente`);
-        }
-
-        function nextStep() {
-            if (isMaster && currentStep < 5) {
-                socket.emit('next_step', { user_id: currentUserId });
-            }
-        }
-
-        function previousStep() {
-            if (isMaster && currentStep > 0) {
-                socket.emit('prev_step', { user_id: currentUserId });
-            }
-        }
-
-        function resetSession() {
-            if (confirm('¿Estás seguro de que quieres reiniciar toda la sesión? Se perderán todos los datos.')) {
-                socket.emit('reset_session');
+            if (isMaster) {
+                document.getElementById('prev-btn').disabled = currentStep === 0;
+                document.getElementById('next-btn').disabled = currentStep === 5;
             }
         }
 
@@ -361,81 +398,122 @@
             
             const userCount = Object.keys(usersData).length;
             participantCount.textContent = userCount;
-
-            let html = '';
+            
+            participantsList.innerHTML = '';
+            
             Object.entries(usersData).forEach(([userId, userData]) => {
+                const div = document.createElement('div');
+                div.className = 'participant-item';
+                
                 const name = userData.nombre || 'Sin nombre';
                 const evaluationCount = Object.keys(userData.evaluaciones || {}).length;
-                html += `
-                    <div class="participant-item">
-                        <span class="participant-name">${name}</span>
-                        <span class="participant-progress">${evaluationCount}/4 rones</span>
-                    </div>
+                const masterIcon = userId === currentUserId ? '👑' : '';
+                
+                div.innerHTML = `
+                    <span class="participant-name">${masterIcon} ${name}</span>
+                    <span class="participant-progress">${evaluationCount}/4 rones</span>
                 `;
+                
+                participantsList.appendChild(div);
             });
-
-            participantsList.innerHTML = html || '<p>No hay participantes conectados</p>';
         }
 
-        function updateLiveResults() {
-            const liveResults = document.getElementById('live-results');
+        function updateResults() {
+            const resultsContainer = document.getElementById('current-results');
             
             if (currentStep === 0) {
-                liveResults.innerHTML = '<p>Los resultados aparecerán cuando comience la evaluación</p>';
+                resultsContainer.innerHTML = '<p>Los resultados aparecerán cuando comience la evaluación</p>';
                 return;
             }
-
-            let html = '';
             
-            // Mostrar resultados del ron actual si estamos en pasos 1-4
+            resultsContainer.innerHTML = '';
+            
+            // Mostrar resultados del ron actual
             if (currentStep >= 1 && currentStep <= 4) {
-                const currentRon = RONES[currentStep - 1];
-                html += `<h5>🥃 Ron ${currentRon} - Resultados Actuales</h5>`;
-                html += generateRonResults(currentRon);
-            }
-
-            // En el paso final, mostrar todos los resultados
-            if (currentStep === 5) {
-                html += '<h5>🏆 Resultados Completos de Todos los Rones</h5>';
-                RONES.forEach(ron => {
-                    html += `<div class="final-ron-section">`;
-                    html += `<h6>Ron ${ron}</h6>`;
-                    html += generateRonResults(ron);
-                    html += '</div>';
+                const ronActual = RONES[currentStep - 1];
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'ron-results';
+                resultDiv.innerHTML = `<h4>Ron ${ronActual}</h4>`;
+                
+                const evaluaciones = [];
+                Object.entries(usersData).forEach(([userId, userData]) => {
+                    if (userData.evaluaciones && userData.evaluaciones[ronActual]) {
+                        evaluaciones.push({
+                            nombre: userData.nombre,
+                            ...userData.evaluaciones[ronActual]
+                        });
+                    }
                 });
-            }
-
-            liveResults.innerHTML = html;
-        }
-
-        function generateRonResults(ron) {
-            let html = '<div class="ron-results">';
-            
-            Object.entries(usersData).forEach(([userId, userData]) => {
-                const evaluation = userData.evaluaciones[ron];
-                if (evaluation) {
-                    html += `
-                        <div class="user-result">
-                            <strong>${userData.nombre || 'Sin nombre'}</strong>: 
-                            <span class="total-score">${evaluation.total} puntos</span>
-                            ${userData.notas ? `<div class="user-notes">📝 "${userData.notas}"</div>` : ''}
-                        </div>
-                    `;
+                
+                if (evaluaciones.length > 0) {
+                    evaluaciones.sort((a, b) => b.total - a.total);
+                    
+                    evaluaciones.forEach((eval, index) => {
+                        const evalDiv = document.createElement('div');
+                        evalDiv.className = 'evaluation-item';
+                        evalDiv.innerHTML = `
+                            <span class="rank">#${index + 1}</span>
+                            <span class="evaluator-name">${eval.nombre}</span>
+                            <span class="total-score">${eval.total} pts</span>
+                        `;
+                        resultDiv.appendChild(evalDiv);
+                    });
+                } else {
+                    resultDiv.innerHTML += '<p>No hay evaluaciones aún</p>';
                 }
-            });
-
-            if (html === '<div class="ron-results">') {
-                html += '<p class="no-results">Aún no hay evaluaciones para este ron</p>';
+                
+                resultsContainer.appendChild(resultDiv);
             }
-
-            html += '</div>';
-            return html;
         }
 
-        // Inicializar la aplicación
-        document.addEventListener('DOMContentLoaded', function() {
-            updateStepDisplay();
-        });
+        function generateFinalSummary() {
+            const summaryContainer = document.getElementById('final-rankings');
+            summaryContainer.innerHTML = '';
+            
+            // Calcular rankings por ron
+            RONES.forEach(ron => {
+                const ronDiv = document.createElement('div');
+                ronDiv.className = 'ron-summary';
+                ronDiv.innerHTML = `<h4>🥃 Ron ${ron}</h4>`;
+                
+                const evaluaciones = [];
+                Object.entries(usersData).forEach(([userId, userData]) => {
+                    if (userData.evaluaciones && userData.evaluaciones[ron]) {
+                        evaluaciones.push({
+                            nombre: userData.nombre,
+                            ...userData.evaluaciones[ron]
+                        });
+                    }
+                });
+                
+                if (evaluaciones.length > 0) {
+                    evaluaciones.sort((a, b) => b.total - a.total);
+                    
+                    evaluaciones.forEach((eval, index) => {
+                        const evalDiv = document.createElement('div');
+                        evalDiv.className = 'final-evaluation-item';
+                        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                        evalDiv.innerHTML = `
+                            <span class="medal">${medal}</span>
+                            <span class="evaluator-name">${eval.nombre}</span>
+                            <span class="total-score">${eval.total} pts</span>
+                        `;
+                        ronDiv.appendChild(evalDiv);
+                    });
+                    
+                    // Promedio
+                    const promedio = (evaluaciones.reduce((sum, eval) => sum + eval.total, 0) / evaluaciones.length).toFixed(1);
+                    const avgDiv = document.createElement('div');
+                    avgDiv.className = 'average-score';
+                    avgDiv.innerHTML = `<strong>Promedio: ${promedio} pts</strong>`;
+                    ronDiv.appendChild(avgDiv);
+                } else {
+                    ronDiv.innerHTML += '<p>Sin evaluaciones</p>';
+                }
+                
+                summaryContainer.appendChild(ronDiv);
+            });
+        }
     </script>
 </body>
 </html> 

@@ -1,6 +1,11 @@
 from flask import Flask, render_template, request
+from flask_socketio import SocketIO, emit, join_room, leave_room
+import uuid
+from datetime import datetime
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'tu_clave_secreta_aqui'
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Puntuaciones fijas por criterio
 PUNTAJES = {
@@ -15,29 +20,101 @@ PUNTAJES = {
 
 RONES = ["A", "B", "C", "D"]
 
-@app.route("/", methods=["GET", "POST"])
+# Almacenamiento temporal de datos de la sesión
+session_data = {
+    "current_step": 0,  # 0: inicio, 1-4: rones A-D, 5: resumen final
+    "users": {},  # {user_id: {nombre, evaluaciones: {}, notas: ""}}
+    "master_control": None  # ID del usuario que controla la navegación
+}
+
+@app.route("/")
 def index():
-    resultados = {}
-    notas = ""
-    nombre = ""
+    return render_template("index.html", 
+                         puntajes=PUNTAJES, 
+                         rones=RONES, 
+                         current_step=session_data["current_step"],
+                         users_data=session_data["users"])
+
+@socketio.on('connect')
+def on_connect():
+    user_id = str(uuid.uuid4())
+    session_data["users"][user_id] = {
+        "nombre": "",
+        "evaluaciones": {},
+        "notas": "",
+        "connected_at": datetime.now().isoformat()
+    }
     
-    if request.method == "POST":
-        nombre = request.form.get("nombre", "")
-        ron_calculado = request.form.get("calcular_ron")
-        
-        if ron_calculado:
-            resultados[ron_calculado] = {
-                "pureza": int(request.form.get(f"pureza_{ron_calculado}", 0)),
-                "olfato_intensidad": int(request.form.get(f"olfato_intensidad_{ron_calculado}", 0)),
-                "olfato_complejidad": int(request.form.get(f"olfato_complejidad_{ron_calculado}", 0)),
-                "gusto_intensidad": int(request.form.get(f"gusto_intensidad_{ron_calculado}", 0)),
-                "gusto_complejidad": int(request.form.get(f"gusto_complejidad_{ron_calculado}", 0)),
-                "gusto_persistencia": int(request.form.get(f"gusto_persistencia_{ron_calculado}", 0)),
-                "armonia": int(request.form.get(f"armonia_{ron_calculado}", 0)),
-            }
-            resultados[ron_calculado]["total"] = sum(resultados[ron_calculado].values())
-        
-        notas = request.form.get("notas", "")
+    # Si es el primer usuario, se convierte en master
+    if session_data["master_control"] is None:
+        session_data["master_control"] = user_id
+        emit('master_status', {'is_master': True})
+    else:
+        emit('master_status', {'is_master': False})
     
-    return render_template("index.html", puntajes=PUNTAJES, rones=RONES, resultados=resultados, notas=notas, nombre=nombre)
+    emit('user_id', {'user_id': user_id})
+    emit('step_update', {'current_step': session_data["current_step"]})
+    emit('users_update', {'users': session_data["users"]})
+
+@socketio.on('disconnect')
+def on_disconnect():
+    # Limpiar usuario desconectado
+    pass
+
+@socketio.on('set_name')
+def handle_set_name(data):
+    user_id = data['user_id']
+    nombre = data['nombre']
+    
+    if user_id in session_data["users"]:
+        session_data["users"][user_id]["nombre"] = nombre
+        socketio.emit('users_update', {'users': session_data["users"]})
+
+@socketio.on('submit_evaluation')
+def handle_evaluation(data):
+    user_id = data['user_id']
+    ron = data['ron']
+    evaluacion = data['evaluacion']
+    notas = data.get('notas', '')
+    
+    if user_id in session_data["users"]:
+        if 'evaluaciones' not in session_data["users"][user_id]:
+            session_data["users"][user_id]["evaluaciones"] = {}
+        
+        # Calcular total
+        total = sum(evaluacion.values())
+        evaluacion['total'] = total
+        
+        session_data["users"][user_id]["evaluaciones"][ron] = evaluacion
+        session_data["users"][user_id]["notas"] = notas
+        
+        socketio.emit('users_update', {'users': session_data["users"]})
+
+@socketio.on('next_step')
+def handle_next_step(data):
+    user_id = data['user_id']
+    
+    # Solo el master puede cambiar de paso
+    if user_id == session_data["master_control"] and session_data["current_step"] < 5:
+        session_data["current_step"] += 1
+        socketio.emit('step_update', {'current_step': session_data["current_step"]})
+
+@socketio.on('prev_step')
+def handle_prev_step(data):
+    user_id = data['user_id']
+    
+    # Solo el master puede cambiar de paso
+    if user_id == session_data["master_control"] and session_data["current_step"] > 0:
+        session_data["current_step"] -= 1
+        socketio.emit('step_update', {'current_step': session_data["current_step"]})
+
+@socketio.on('reset_session')
+def handle_reset():
+    session_data["current_step"] = 0
+    session_data["users"] = {}
+    session_data["master_control"] = None
+    socketio.emit('session_reset')
+
+if __name__ == '__main__':
+    socketio.run(app, debug=True)
 

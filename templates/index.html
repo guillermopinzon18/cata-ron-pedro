@@ -2,132 +2,440 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Evaluación Sensorial de Ron</title>
+    <title>Cata Colaborativa de Ron</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 </head>
 <body>
-    <h2>Evaluación Sensorial de Ron</h2>
-    <form method="POST">
-        <div class="evaluador-info">
-            <label for="nombre">Nombre y Apellido:</label>
-            <input type="text" id="nombre" name="nombre" value="{{ nombre }}" required>
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <h2>Conectando...</h2>
+            <div class="spinner"></div>
         </div>
-        {% for ron in rones %}
-        <div class="ron-box">
-            <h3>Ron {{ ron }}</h3>
-            <div class="scroll-table">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Categoría</th>
-                            <th>Subcriterio</th>
-                            <th>Descripción</th>
-                            <th>Puntaje</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- VISTA -->
-                        <tr>
-                            <td rowspan="1"><b>VISTA</b></td>
-                            <td><b>PUREZA</b></td>
-                            <td>Limpidez, sin partículas</td>
-                            <td>
-                                <select name="pureza_{{ ron }}">
-                                    {% for val in puntajes.pureza %}
-                                    <option value="{{ val }}" {% if resultados.get(ron, {}).get('pureza') == val %}selected{% endif %}>{{ val }}</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                        </tr>
-                        <!-- OLFATO -->
-                        <tr>
-                            <td rowspan="2"><b>OLFATO</b></td>
-                            <td><b>INTENSIDAD</b></td>
-                            <td>Fuerza y persistencia del aroma</td>
-                            <td>
-                                <select name="olfato_intensidad_{{ ron }}">
-                                    {% for val in puntajes.olfato_intensidad %}
-                                    <option value="{{ val }}" {% if resultados.get(ron, {}).get('olfato_intensidad') == val %}selected{% endif %}>{{ val }}</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><b>COMPLEJIDAD</b></td>
-                            <td>Variedad de aromas, elegancia y finura</td>
-                            <td>
-                                <select name="olfato_complejidad_{{ ron }}">
-                                    {% for val in puntajes.olfato_complejidad %}
-                                    <option value="{{ val }}" {% if resultados.get(ron, {}).get('olfato_complejidad') == val %}selected{% endif %}>{{ val }}</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                        </tr>
-                        <!-- GUSTO -->
-                        <tr>
-                            <td rowspan="3"><b>GUSTO</b></td>
-                            <td><b>INTENSIDAD</b></td>
-                            <td>Fuerza de los sabores y primera entrada</td>
-                            <td>
-                                <select name="gusto_intensidad_{{ ron }}">
-                                    {% for val in puntajes.gusto_intensidad %}
-                                    <option value="{{ val }}" {% if resultados.get(ron, {}).get('gusto_intensidad') == val %}selected{% endif %}>{{ val }}</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><b>COMPLEJIDAD</b></td>
-                            <td>Variedad de sabores, elegancia y finura</td>
-                            <td>
-                                <select name="gusto_complejidad_{{ ron }}">
-                                    {% for val in puntajes.gusto_complejidad %}
-                                    <option value="{{ val }}" {% if resultados.get(ron, {}).get('gusto_complejidad') == val %}selected{% endif %}>{{ val }}</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><b>PERSISTENCIA</b></td>
-                            <td>Duración de la sensación remanente en la boca</td>
-                            <td>
-                                <select name="gusto_persistencia_{{ ron }}">
-                                    {% for val in puntajes.gusto_persistencia %}
-                                    <option value="{{ val }}" {% if resultados.get(ron, {}).get('gusto_persistencia') == val %}selected{% endif %}>{{ val }}</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                        </tr>
-                        <!-- JUICIO GLOBAL -->
-                        <tr>
-                            <td rowspan="1"><b>JUICIO GLOBAL</b></td>
-                            <td><b>ARMONÍA</b></td>
-                            <td>Apreciación General</td>
-                            <td>
-                                <select name="armonia_{{ ron }}">
-                                    {% for val in puntajes.armonia %}
-                                    <option value="{{ val }}" {% if resultados.get(ron, {}).get('armonia') == val %}selected{% endif %}>{{ val }}</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                        </tr>
-                        <!-- TOTAL -->
-                        <tr class="total-row">
-                            <td colspan="3"><b>VALORACIÓN TOTAL</b></td>
-                            <td><b>{{ resultados.get(ron, {}).get('total', '') }}</b></td>
-                        </tr>
-                    </tbody>
-                </table>
+    </div>
+
+    <div id="main-content" style="display: none;">
+        <h2>Cata Colaborativa de Ron</h2>
+        
+        <!-- Datos ocultos para JavaScript -->
+        <script type="application/json" id="rones-data">{{ rones | tojson }}</script>
+        <script type="application/json" id="puntajes-data">{{ puntajes | tojson }}</script>
+        
+        <!-- Panel de control del master -->
+        <div id="master-controls" style="display: none;" class="master-controls">
+            <div class="control-buttons">
+                <button id="prev-btn" onclick="previousStep()" class="nav-btn" disabled>⬅ Anterior</button>
+                <span id="step-indicator" class="step-indicator">Paso 0 de 5</span>
+                <button id="next-btn" onclick="nextStep()" class="nav-btn">Siguiente ➡</button>
             </div>
-            <button type="submit" name="calcular_ron" value="{{ ron }}" class="calcular-btn">Calcular Ron {{ ron }}</button>
+            <button onclick="resetSession()" class="reset-btn">🔄 Reiniciar Sesión</button>
         </div>
-        <br>
-        {% endfor %}
-        <div class="notas">
-            <label for="notas">NOTAS DE CATA:</label>
-            <textarea name="notas" id="notas" rows="3">{{ notas }}</textarea>
+
+        <!-- Paso 0: Bienvenida y nombre -->
+        <div id="step-0" class="step-content">
+            <div class="welcome-section">
+                <h3>¡Bienvenido a la Cata Colaborativa!</h3>
+                <p>Ingresa tu nombre para comenzar:</p>
+                <div class="name-input-section">
+                    <input type="text" id="user-name" placeholder="Tu nombre y apellido" maxlength="50">
+                    <button onclick="setUserName()" class="submit-name-btn">Confirmar Nombre</button>
+                </div>
+                <div id="name-status" class="name-status"></div>
+            </div>
         </div>
-    </form>
+
+        <!-- Pasos 1-4: Evaluación de rones -->
+        <div id="step-1" class="step-content" style="display: none;">
+            <div class="current-ron-section">
+                <h3 id="current-ron-title">Ron A</h3>
+                <div id="evaluation-form"></div>
+            </div>
+        </div>
+
+        <div id="step-2" class="step-content" style="display: none;">
+            <div class="current-ron-section">
+                <h3 id="current-ron-title-2">Ron B</h3>
+                <div id="evaluation-form-2"></div>
+            </div>
+        </div>
+
+        <div id="step-3" class="step-content" style="display: none;">
+            <div class="current-ron-section">
+                <h3 id="current-ron-title-3">Ron C</h3>
+                <div id="evaluation-form-3"></div>
+            </div>
+        </div>
+
+        <div id="step-4" class="step-content" style="display: none;">
+            <div class="current-ron-section">
+                <h3 id="current-ron-title-4">Ron D</h3>
+                <div id="evaluation-form-4"></div>
+            </div>
+        </div>
+
+        <!-- Paso 5: Resumen final -->
+        <div id="step-5" class="step-content" style="display: none;">
+            <div class="final-summary">
+                <h3>🏆 Resultados Finales de la Cata</h3>
+                <div id="final-results"></div>
+            </div>
+        </div>
+
+        <!-- Panel de resultados en tiempo real -->
+        <div id="results-panel" class="results-panel">
+            <h4>📊 Resultados en Tiempo Real</h4>
+            <div id="live-results"></div>
+        </div>
+
+        <!-- Panel de participantes -->
+        <div id="participants-panel" class="participants-panel">
+            <h4>👥 Participantes Conectados (<span id="participant-count">0</span>)</h4>
+            <div id="participants-list"></div>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let socket = io();
+        let currentUserId = null;
+        let isMaster = false;
+        let currentStep = 0;
+        let usersData = {};
+
+        const RONES = JSON.parse(document.getElementById('rones-data').textContent);
+        const PUNTAJES = JSON.parse(document.getElementById('puntajes-data').textContent);
+
+        // Conectar WebSocket
+        socket.on('connect', function() {
+            console.log('Conectado al servidor');
+        });
+
+        socket.on('user_id', function(data) {
+            currentUserId = data.user_id;
+            console.log('ID de usuario asignado:', currentUserId);
+        });
+
+        socket.on('master_status', function(data) {
+            isMaster = data.is_master;
+            if (isMaster) {
+                document.getElementById('master-controls').style.display = 'block';
+                console.log('Eres el coordinador de la cata');
+            }
+        });
+
+        socket.on('step_update', function(data) {
+            currentStep = data.current_step;
+            updateStepDisplay();
+        });
+
+        socket.on('users_update', function(data) {
+            usersData = data.users;
+            updateParticipants();
+            updateLiveResults();
+        });
+
+        socket.on('session_reset', function() {
+            location.reload();
+        });
+
+        // Función para ocultar loading y mostrar contenido
+        function hideLoading() {
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('main-content').style.display = 'block';
+        }
+
+        // Inicialización cuando se carga la página
+        setTimeout(hideLoading, 1000);
+
+        function setUserName() {
+            const name = document.getElementById('user-name').value.trim();
+            if (name) {
+                socket.emit('set_name', {
+                    user_id: currentUserId,
+                    nombre: name
+                });
+                document.getElementById('name-status').innerHTML = `<span class="success">✓ Nombre confirmado: ${name}</span>`;
+                document.getElementById('user-name').disabled = true;
+            }
+        }
+
+        function updateStepDisplay() {
+            // Ocultar todos los pasos
+            for (let i = 0; i <= 5; i++) {
+                const stepElement = document.getElementById(`step-${i}`);
+                if (stepElement) {
+                    stepElement.style.display = 'none';
+                }
+            }
+
+            // Mostrar paso actual
+            const currentStepElement = document.getElementById(`step-${currentStep}`);
+            if (currentStepElement) {
+                currentStepElement.style.display = 'block';
+            }
+
+            // Actualizar indicador de paso
+            document.getElementById('step-indicator').textContent = `Paso ${currentStep} de 5`;
+
+            // Crear formulario de evaluación si es necesario
+            if (currentStep >= 1 && currentStep <= 4) {
+                createEvaluationForm(currentStep);
+            }
+
+            // Actualizar botones de navegación
+            document.getElementById('prev-btn').disabled = currentStep === 0;
+            document.getElementById('next-btn').disabled = currentStep === 5;
+        }
+
+        function createEvaluationForm(step) {
+            const ronIndex = step - 1;
+            const ron = RONES[ronIndex];
+            const formContainer = document.getElementById(`evaluation-form${step > 1 ? '-' + step : ''}`);
+            
+            if (!formContainer) return;
+
+            formContainer.innerHTML = `
+                <div class="scroll-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Categoría</th>
+                                <th>Subcriterio</th>
+                                <th>Descripción</th>
+                                <th>Puntaje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- VISTA -->
+                            <tr>
+                                <td rowspan="1"><b>VISTA</b></td>
+                                <td><b>PUREZA</b></td>
+                                <td>Limpidez, sin partículas</td>
+                                <td>
+                                    <select id="pureza_${ron}">
+                                        ${PUNTAJES.pureza.map(val => `<option value="${val}">${val}</option>`).join('')}
+                                    </select>
+                                </td>
+                            </tr>
+                            <!-- OLFATO -->
+                            <tr>
+                                <td rowspan="2"><b>OLFATO</b></td>
+                                <td><b>INTENSIDAD</b></td>
+                                <td>Fuerza y persistencia del aroma</td>
+                                <td>
+                                    <select id="olfato_intensidad_${ron}">
+                                        ${PUNTAJES.olfato_intensidad.map(val => `<option value="${val}">${val}</option>`).join('')}
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><b>COMPLEJIDAD</b></td>
+                                <td>Variedad de aromas, elegancia y finura</td>
+                                <td>
+                                    <select id="olfato_complejidad_${ron}">
+                                        ${PUNTAJES.olfato_complejidad.map(val => `<option value="${val}">${val}</option>`).join('')}
+                                    </select>
+                                </td>
+                            </tr>
+                            <!-- GUSTO -->
+                            <tr>
+                                <td rowspan="3"><b>GUSTO</b></td>
+                                <td><b>INTENSIDAD</b></td>
+                                <td>Fuerza de los sabores y primera entrada</td>
+                                <td>
+                                    <select id="gusto_intensidad_${ron}">
+                                        ${PUNTAJES.gusto_intensidad.map(val => `<option value="${val}">${val}</option>`).join('')}
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><b>COMPLEJIDAD</b></td>
+                                <td>Variedad de sabores, elegancia y finura</td>
+                                <td>
+                                    <select id="gusto_complejidad_${ron}">
+                                        ${PUNTAJES.gusto_complejidad.map(val => `<option value="${val}">${val}</option>`).join('')}
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><b>PERSISTENCIA</b></td>
+                                <td>Duración de la sensación remanente en la boca</td>
+                                <td>
+                                    <select id="gusto_persistencia_${ron}">
+                                        ${PUNTAJES.gusto_persistencia.map(val => `<option value="${val}">${val}</option>`).join('')}
+                                    </select>
+                                </td>
+                            </tr>
+                            <!-- JUICIO GLOBAL -->
+                            <tr>
+                                <td rowspan="1"><b>JUICIO GLOBAL</b></td>
+                                <td><b>ARMONÍA</b></td>
+                                <td>Apreciación General</td>
+                                <td>
+                                    <select id="armonia_${ron}">
+                                        ${PUNTAJES.armonia.map(val => `<option value="${val}">${val}</option>`).join('')}
+                                    </select>
+                                </td>
+                            </tr>
+                            <!-- TOTAL -->
+                            <tr class="total-row">
+                                <td colspan="3"><b>VALORACIÓN TOTAL</b></td>
+                                <td><b id="total_${ron}">0</b></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="notas-section">
+                    <label for="notas_${ron}">NOTAS DE CATA:</label>
+                    <textarea id="notas_${ron}" rows="3" placeholder="Escribe tus observaciones sobre este ron..."></textarea>
+                </div>
+                <button onclick="submitEvaluation('${ron}')" class="submit-evaluation-btn">💾 Guardar Evaluación del Ron ${ron}</button>
+            `;
+
+            // Agregar listeners para cálculo automático
+            const selects = formContainer.querySelectorAll('select');
+            selects.forEach(select => {
+                select.addEventListener('change', () => calculateTotal(ron));
+            });
+        }
+
+        function calculateTotal(ron) {
+            const criteria = ['pureza', 'olfato_intensidad', 'olfato_complejidad', 'gusto_intensidad', 'gusto_complejidad', 'gusto_persistencia', 'armonia'];
+            let total = 0;
+            
+            criteria.forEach(criterion => {
+                const selectElement = document.getElementById(`${criterion}_${ron}`);
+                if (selectElement) {
+                    total += parseInt(selectElement.value) || 0;
+                }
+            });
+            
+            document.getElementById(`total_${ron}`).textContent = total;
+        }
+
+        function submitEvaluation(ron) {
+            const evaluation = {
+                pureza: parseInt(document.getElementById(`pureza_${ron}`).value),
+                olfato_intensidad: parseInt(document.getElementById(`olfato_intensidad_${ron}`).value),
+                olfato_complejidad: parseInt(document.getElementById(`olfato_complejidad_${ron}`).value),
+                gusto_intensidad: parseInt(document.getElementById(`gusto_intensidad_${ron}`).value),
+                gusto_complejidad: parseInt(document.getElementById(`gusto_complejidad_${ron}`).value),
+                gusto_persistencia: parseInt(document.getElementById(`gusto_persistencia_${ron}`).value),
+                armonia: parseInt(document.getElementById(`armonia_${ron}`).value)
+            };
+
+            const notas = document.getElementById(`notas_${ron}`).value;
+
+            socket.emit('submit_evaluation', {
+                user_id: currentUserId,
+                ron: ron,
+                evaluacion: evaluation,
+                notas: notas
+            });
+
+            alert(`✅ Evaluación del Ron ${ron} guardada correctamente`);
+        }
+
+        function nextStep() {
+            if (isMaster && currentStep < 5) {
+                socket.emit('next_step', { user_id: currentUserId });
+            }
+        }
+
+        function previousStep() {
+            if (isMaster && currentStep > 0) {
+                socket.emit('prev_step', { user_id: currentUserId });
+            }
+        }
+
+        function resetSession() {
+            if (confirm('¿Estás seguro de que quieres reiniciar toda la sesión? Se perderán todos los datos.')) {
+                socket.emit('reset_session');
+            }
+        }
+
+        function updateParticipants() {
+            const participantsList = document.getElementById('participants-list');
+            const participantCount = document.getElementById('participant-count');
+            
+            const userCount = Object.keys(usersData).length;
+            participantCount.textContent = userCount;
+
+            let html = '';
+            Object.entries(usersData).forEach(([userId, userData]) => {
+                const name = userData.nombre || 'Sin nombre';
+                const evaluationCount = Object.keys(userData.evaluaciones || {}).length;
+                html += `
+                    <div class="participant-item">
+                        <span class="participant-name">${name}</span>
+                        <span class="participant-progress">${evaluationCount}/4 rones</span>
+                    </div>
+                `;
+            });
+
+            participantsList.innerHTML = html || '<p>No hay participantes conectados</p>';
+        }
+
+        function updateLiveResults() {
+            const liveResults = document.getElementById('live-results');
+            
+            if (currentStep === 0) {
+                liveResults.innerHTML = '<p>Los resultados aparecerán cuando comience la evaluación</p>';
+                return;
+            }
+
+            let html = '';
+            
+            // Mostrar resultados del ron actual si estamos en pasos 1-4
+            if (currentStep >= 1 && currentStep <= 4) {
+                const currentRon = RONES[currentStep - 1];
+                html += `<h5>🥃 Ron ${currentRon} - Resultados Actuales</h5>`;
+                html += generateRonResults(currentRon);
+            }
+
+            // En el paso final, mostrar todos los resultados
+            if (currentStep === 5) {
+                html += '<h5>🏆 Resultados Completos de Todos los Rones</h5>';
+                RONES.forEach(ron => {
+                    html += `<div class="final-ron-section">`;
+                    html += `<h6>Ron ${ron}</h6>`;
+                    html += generateRonResults(ron);
+                    html += '</div>';
+                });
+            }
+
+            liveResults.innerHTML = html;
+        }
+
+        function generateRonResults(ron) {
+            let html = '<div class="ron-results">';
+            
+            Object.entries(usersData).forEach(([userId, userData]) => {
+                const evaluation = userData.evaluaciones[ron];
+                if (evaluation) {
+                    html += `
+                        <div class="user-result">
+                            <strong>${userData.nombre || 'Sin nombre'}</strong>: 
+                            <span class="total-score">${evaluation.total} puntos</span>
+                            ${userData.notas ? `<div class="user-notes">📝 "${userData.notas}"</div>` : ''}
+                        </div>
+                    `;
+                }
+            });
+
+            if (html === '<div class="ron-results">') {
+                html += '<p class="no-results">Aún no hay evaluaciones para este ron</p>';
+            }
+
+            html += '</div>';
+            return html;
+        }
+
+        // Inicializar la aplicación
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStepDisplay();
+        });
+    </script>
 </body>
 </html> 

@@ -14,7 +14,7 @@
         <div class="progress-bar">
             {% for i in range(1, rones|length + 1) %}
                 <div class="step {% if i == paso_actual %}active{% elif i < paso_actual %}completed{% endif %}">
-                    Ron {{ rones[i-1] }}
+                    Muestra {{ i }}
                 </div>
             {% endfor %}
         </div>
@@ -39,8 +39,7 @@
                 <!-- Ron actual -->
                 {% set ron_actual = rones[paso_actual-1] %}
                 <div class="ron-box">
-                    <h2>🍯 Evaluando Ron {{ ron_actual }}</h2>
-                    <p class="paso-info">Paso {{ paso_actual }} de {{ rones|length }}</p>
+                    <h2>🍯 Evaluando Muestra {{ paso_actual }}</h2>
                     
                     <div class="scroll-table">
                         <table>
@@ -163,7 +162,7 @@
                 <div class="navigation-buttons">
                     {% if paso_actual > 1 %}
                         <button type="submit" name="accion" value="anterior" class="btn-secondary">
-                            ← Paso Anterior
+                            ← Anterior
                         </button>
                     {% endif %}
                     
@@ -181,6 +180,7 @@
         </div>
 
         <!-- Resultados de todos los participantes -->
+        {% if datos %}
         <div class="results-section">
             <h2>📊 Resultados de Todos los Participantes</h2>
             <div class="refresh-info">
@@ -189,51 +189,48 @@
             </div>
             
             <div id="resultados-container">
-                {% if datos %}
-                    {% for ron in rones %}
-                        <div class="resultado-ron">
-                            <h3>Ron {{ ron }}</h3>
-                            <div class="tabla-responsive">
-                                <table class="resultados-tabla">
-                                    <thead>
+                {% for ron in rones %}
+                    <div class="resultado-ron">
+                        <h3>Muestra {{ loop.index }}</h3>
+                        <div class="tabla-responsive">
+                            <table class="resultados-tabla">
+                                <thead>
+                                    <tr>
+                                        <th>Participante</th>
+                                        <th>Pureza</th>
+                                        <th>Olfato Int.</th>
+                                        <th>Olfato Comp.</th>
+                                        <th>Gusto Int.</th>
+                                        <th>Gusto Comp.</th>
+                                        <th>Persistencia</th>
+                                        <th>Armonía</th>
+                                        <th>TOTAL</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for nombre, usuario_datos in datos.items() %}
+                                        {% if ron in usuario_datos %}
                                         <tr>
-                                            <th>Participante</th>
-                                            <th>Pureza</th>
-                                            <th>Olfato Int.</th>
-                                            <th>Olfato Comp.</th>
-                                            <th>Gusto Int.</th>
-                                            <th>Gusto Comp.</th>
-                                            <th>Persistencia</th>
-                                            <th>Armonía</th>
-                                            <th>TOTAL</th>
+                                            <td class="nombre-participante">{{ nombre }}</td>
+                                            <td>{{ usuario_datos[ron].pureza }}</td>
+                                            <td>{{ usuario_datos[ron].olfato_intensidad }}</td>
+                                            <td>{{ usuario_datos[ron].olfato_complejidad }}</td>
+                                            <td>{{ usuario_datos[ron].gusto_intensidad }}</td>
+                                            <td>{{ usuario_datos[ron].gusto_complejidad }}</td>
+                                            <td>{{ usuario_datos[ron].gusto_persistencia }}</td>
+                                            <td>{{ usuario_datos[ron].armonia }}</td>
+                                            <td class="total-cell">{{ usuario_datos[ron].total }}</td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for nombre, usuario_datos in datos.items() %}
-                                            {% if ron in usuario_datos %}
-                                            <tr>
-                                                <td class="nombre-participante">{{ nombre }}</td>
-                                                <td>{{ usuario_datos[ron].pureza }}</td>
-                                                <td>{{ usuario_datos[ron].olfato_intensidad }}</td>
-                                                <td>{{ usuario_datos[ron].olfato_complejidad }}</td>
-                                                <td>{{ usuario_datos[ron].gusto_intensidad }}</td>
-                                                <td>{{ usuario_datos[ron].gusto_complejidad }}</td>
-                                                <td>{{ usuario_datos[ron].gusto_persistencia }}</td>
-                                                <td>{{ usuario_datos[ron].armonia }}</td>
-                                                <td class="total-cell">{{ usuario_datos[ron].total }}</td>
-                                            </tr>
-                                            {% endif %}
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
-                    {% endfor %}
-                {% else %}
-                    <p class="no-data">Aún no hay participantes. ¡Sé el primero en evaluar!</p>
-                {% endif %}
+                    </div>
+                {% endfor %}
             </div>
         </div>
+        {% endif %}
     </div>
 
     <!-- JavaScript para actualización automática -->

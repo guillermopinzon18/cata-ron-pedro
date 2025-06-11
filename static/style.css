@@ -223,6 +223,7 @@ select[required]:invalid {
     gap: 15px;
     margin: 25px 0;
     flex-wrap: wrap;
+    text-align: center;
 }
 
 .btn-primary, .btn-secondary, .btn-success, .btn-refresh {
@@ -240,6 +241,7 @@ select[required]:invalid {
 .btn-primary {
     background: linear-gradient(45deg, #4CAF50, #45a049);
     color: white;
+    min-width: 200px;
 }
 
 .btn-primary:hover {
@@ -250,6 +252,7 @@ select[required]:invalid {
 .btn-secondary {
     background: linear-gradient(45deg, #6c757d, #495057);
     color: white;
+    min-width: 150px;
 }
 
 .btn-secondary:hover {
@@ -262,6 +265,7 @@ select[required]:invalid {
     color: white;
     font-size: 1.1em;
     padding: 15px 35px;
+    min-width: 220px;
 }
 
 .btn-success:hover {
@@ -384,11 +388,16 @@ select[required]:invalid {
     .navigation-buttons {
         flex-direction: column;
         align-items: center;
+        gap: 10px;
+        margin: 20px auto;
+        max-width: 300px;
     }
     
     .btn-primary, .btn-secondary, .btn-success {
-        width: 200px;
+        width: 100%;
         margin: 5px 0;
+        min-width: unset;
+        text-align: center;
     }
     
     table {
@@ -424,6 +433,12 @@ select[required]:invalid {
         padding: 15px;
     }
     
+    .navigation-buttons {
+        margin: 15px auto;
+        max-width: 280px;
+        gap: 8px;
+    }
+    
     th, td {
         padding: 8px 4px;
         font-size: 0.9em;
@@ -432,5 +447,10 @@ select[required]:invalid {
     .btn-primary, .btn-secondary, .btn-success {
         width: 100%;
         font-size: 0.9em;
+        padding: 12px 20px;
+    }
+    
+    .btn-success {
+        font-size: 1em;
     }
 } 

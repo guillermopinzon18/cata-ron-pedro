@@ -128,7 +128,7 @@ def index():
                                      paso_actual=paso_actual + 1,
                                      datos=datos,
                                      nombre=nombre,
-                                     success=f"Ron {ron_actual} guardado correctamente")
+                                     success=f"Muestra {paso_actual} guardada correctamente")
             elif accion == "anterior" and paso_actual > 1:
                 # Redirigir con paso anterior
                 return render_template("index.html", 

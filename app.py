@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 import sqlite3
+import urllib.parse
 
 # Load environment variables
 load_dotenv()
@@ -14,14 +15,33 @@ app = Flask(__name__)
 app.secret_key = 'cata_ron_secret_key_2024'
 
 # PostgreSQL configuration with Supabase
+# Parse the connection URL to add SSL requirements
 DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://postgres:BRevIdsERoclrtgf@db.jpdizuizmhqmellbhniz.supabase.co:5432/postgres')
+parsed = urllib.parse.urlparse(DATABASE_URL)
+# Add SSL mode and other required parameters
+DATABASE_URL = urllib.parse.urlunparse(parsed._replace(
+    query=urllib.parse.urlencode({
+        'sslmode': 'require',
+        'connect_timeout': '10',
+        'application_name': 'cata_ron_app'
+    })
+))
+
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_size': 20,
-    'max_overflow': 10,
+    'pool_size': 1,  # Vercel works better with a small pool
+    'max_overflow': 2,
     'pool_timeout': 30,
     'pool_recycle': 1800,
+    'pool_pre_ping': True,  # Verify connections before using them
+    'connect_args': {
+        'connect_timeout': 10,
+        'keepalives': 1,
+        'keepalives_idle': 30,
+        'keepalives_interval': 10,
+        'keepalives_count': 5
+    }
 }
 
 db = SQLAlchemy(app)
@@ -38,6 +58,8 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
 
 # Modelo para las catas
 class Cata(db.Model):
+    __tablename__ = 'catas'  # Explicitly name the table
+    
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False, index=True)  # Índice para búsquedas más rápidas
     ron = db.Column(db.String(1), nullable=False, index=True)
@@ -57,9 +79,23 @@ class Cata(db.Model):
         db.Index('idx_nombre_ron', 'nombre', 'ron'),  # Índice compuesto para búsquedas más eficientes
     )
 
-# Crear las tablas
-with app.app_context():
-    db.create_all()
+# Crear las tablas solo si no existen
+def init_db():
+    try:
+        with app.app_context():
+            # Verificar si la tabla existe
+            inspector = db.inspect(db.engine)
+            if 'catas' not in inspector.get_table_names():
+                db.create_all()
+                print("Tablas creadas exitosamente")
+            else:
+                print("Las tablas ya existen")
+    except Exception as e:
+        print(f"Error inicializando la base de datos: {e}")
+        raise
+
+# Inicializar la base de datos
+init_db()
 
 # Puntuaciones fijas por criterio
 PUNTAJES = {

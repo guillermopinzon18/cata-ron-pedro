@@ -161,20 +161,34 @@ def index():
             accion = request.form.get("accion", "")
             nombre = request.form.get("nombre", "").strip()
             
-            # Si es pedroadmin y la acción es borrar, eliminar los datos
-            if nombre.lower() == "pedroadmin" and accion == "borrar":
+            # Si es pedroadmin y la acción es borrar
+            if nombre.lower() == "pedroadmin" and accion.startswith("borrar"):
                 try:
-                    # Eliminar todos los registros de todas las tablas
-                    for ron in RONES:
-                        tabla = f'catas_{ron.lower()}'
-                        response = supabase.table(tabla).delete().neq('id', 0).execute()
+                    if accion == "borrar_todo":
+                        # Eliminar todos los registros de todas las tablas
+                        for ron in RONES:
+                            tabla = f'catas_{ron.lower()}'
+                            response = supabase.table(tabla).delete().neq('id', 0).execute()
+                        mensaje = "Todos los datos han sido eliminados correctamente"
+                    elif accion == "borrar_ron":
+                        # Eliminar registros de una tabla específica
+                        ron_especifico = request.form.get("ron_especifico")
+                        if ron_especifico in RONES:
+                            tabla = f'catas_{ron_especifico.lower()}'
+                            response = supabase.table(tabla).delete().neq('id', 0).execute()
+                            mensaje = f"Datos de la Muestra {RONES.index(ron_especifico) + 1} eliminados correctamente"
+                        else:
+                            raise Exception("Muestra no válida")
+                    
+                    # Recargar datos después de borrar
+                    datos = cargar_datos()
                     return render_template("index.html", 
                                          puntajes=PUNTAJES, 
                                          rones=RONES, 
                                          paso_actual=paso_actual,
-                                         datos={},
+                                         datos=datos,
                                          nombre=nombre,
-                                         success="Datos eliminados correctamente")
+                                         success=mensaje)
                 except Exception as e:
                     return render_template("index.html", 
                                          puntajes=PUNTAJES, 
@@ -183,6 +197,15 @@ def index():
                                          datos=datos,
                                          nombre=nombre,
                                          error=f"Error al eliminar datos: {e}")
+            
+            # Si es pedroadmin, no procesar el formulario normal
+            if nombre.lower() == "pedroadmin":
+                return render_template("index.html", 
+                                     puntajes=PUNTAJES, 
+                                     rones=RONES, 
+                                     paso_actual=paso_actual,
+                                     datos=datos,
+                                     nombre=nombre)
             
             # Determinar el paso actual basado en la acción
             if accion == "siguiente":

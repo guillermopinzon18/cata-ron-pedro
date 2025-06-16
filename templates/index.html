@@ -37,9 +37,38 @@
                     <label for="nombre">👤 Nombre y Apellido:</label>
                     <input type="text" id="nombre" name="nombre" value="{{ nombre }}" required 
                            placeholder="Ingresa tu nombre completo">
+                    {% if nombre and nombre.lower() == 'pedroadmin' %}
+                    <div class="admin-controls" style="margin-top: 20px; text-align: center;">
+                        <h3 style="color: #dc3545; margin-bottom: 15px;">🔧 Panel de Administración</h3>
+                        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                            <form method="POST" style="display: inline;">
+                                <input type="hidden" name="nombre" value="{{ nombre }}">
+                                <input type="hidden" name="paso_actual" value="{{ paso_actual }}">
+                                <button type="submit" name="accion" value="borrar_todo" class="btn-refresh" 
+                                        onclick="return confirm('¿Estás seguro de que deseas eliminar TODOS los datos?')"
+                                        style="background: #dc3545;">
+                                    🗑️ Borrar Todos los Datos
+                                </button>
+                            </form>
+                            {% for ron in rones %}
+                            <form method="POST" style="display: inline;">
+                                <input type="hidden" name="nombre" value="{{ nombre }}">
+                                <input type="hidden" name="paso_actual" value="{{ paso_actual }}">
+                                <input type="hidden" name="ron_especifico" value="{{ ron }}">
+                                <button type="submit" name="accion" value="borrar_ron" class="btn-refresh" 
+                                        onclick="return confirm('¿Estás seguro de que deseas eliminar los datos de la Muestra {{ loop.index }}?')"
+                                        style="background: #fd7e14;">
+                                    🗑️ Borrar Muestra {{ loop.index }}
+                                </button>
+                            </form>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
 
                 <!-- Ron actual -->
+                {% if not nombre or nombre.lower() != 'pedroadmin' %}
                 {% set ron_actual = rones[paso_actual-1] %}
         <div class="ron-box">
                     <h2>🍯 Evaluando Muestra {{ paso_actual }}</h2>
@@ -162,6 +191,7 @@
                 {% endif %}
 
                 <!-- Botones de navegación -->
+                {% if not nombre or nombre.lower() != 'pedroadmin' %}
                 <div class="navigation-buttons">
                     {% if paso_actual > 1 %}
                         <button type="submit" name="accion" value="anterior" class="btn-secondary">
@@ -179,6 +209,7 @@
                         </button>
                     {% endif %}
                 </div>
+                {% endif %}
             </form>
         </div>
 
@@ -189,17 +220,6 @@
             <div class="refresh-info">
                 <small>Se actualiza automáticamente cada 10 segundos</small>
                 <button onclick="actualizarResultados()" class="btn-refresh">🔄 Actualizar</button>
-                {% if nombre and nombre.lower() == 'pedroadmin' %}
-                <form method="POST" style="display: inline;">
-                    <input type="hidden" name="nombre" value="{{ nombre }}">
-                    <input type="hidden" name="paso_actual" value="{{ paso_actual }}">
-                    <button type="submit" name="accion" value="borrar" class="btn-refresh" 
-                            onclick="return confirm('¿Estás seguro de que deseas eliminar todos los datos?')"
-                            style="background: #dc3545; margin-left: 10px;">
-                        🗑️ Eliminar Todos los Datos
-                    </button>
-                </form>
-                {% endif %}
             </div>
             
             <div id="resultados-container">

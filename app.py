@@ -98,14 +98,15 @@ def guardar_datos(datos):
                         response = supabase.table('catas').upsert(cata_data).execute()
                         
                         if not response.data:
-                            raise Exception("No se pudo guardar los datos")
+                            print(f"Respuesta de Supabase al guardar: {response}")
+                            raise Exception(f"No se pudo guardar los datos. Error: {getattr(response, 'error', 'Sin error explícito')}")
             
             return  # Éxito, salir del bucle
                 
         except Exception as e:
             intento += 1
+            print(f"Error guardando datos en Supabase: {e}")
             if intento == max_intentos:
-                print(f"Error guardando datos en Supabase después de {max_intentos} intentos: {e}")
                 raise
             print(f"Intento {intento} fallido, reintentando...")
             time.sleep(0.1 * intento)  # Esperar un poco más entre intentos
@@ -172,8 +173,17 @@ def index():
             if paso_actual == len(RONES):
                 datos[nombre]["notas"] = request.form.get("notas", "")
             
-            # Guardar en Supabase
-            guardar_datos(datos)
+            try:
+                guardar_datos(datos)
+            except Exception as e:
+                print(f"Error real al guardar: {e}")
+                return render_template("index.html", 
+                                     puntajes=PUNTAJES, 
+                                     rones=RONES, 
+                                     paso_actual=paso_actual,
+                                     datos=datos,
+                                     nombre=nombre,
+                                     error=f"Error al guardar: {e}")
             
             # Determinar siguiente acción
             accion = request.form.get("accion", "")

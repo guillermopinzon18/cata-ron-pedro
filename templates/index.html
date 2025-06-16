@@ -37,6 +37,7 @@
                     <label for="nombre">👤 Nombre y Apellido:</label>
                     <input type="text" id="nombre" name="nombre" value="{{ nombre }}" required 
                            placeholder="Ingresa tu nombre completo">
+                    
                     {% if nombre and nombre.lower() == 'pedroadmin' %}
                     <div class="admin-controls" style="margin-top: 20px; text-align: center;">
                         <h3 style="color: #dc3545; margin-bottom: 15px;">🔧 Panel de Administración</h3>
@@ -67,118 +68,117 @@
                     {% endif %}
                 </div>
 
-                <!-- Ron actual -->
                 {% if not nombre or nombre.lower() != 'pedroadmin' %}
+                <!-- Ron actual -->
                 {% set ron_actual = rones[paso_actual-1] %}
-        <div class="ron-box">
+                <div class="ron-box">
                     <h2>🍯 Evaluando Muestra {{ paso_actual }}</h2>
-                    
-            <div class="scroll-table">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Categoría</th>
-                            <th>Subcriterio</th>
-                            <th>Descripción</th>
-                            <th>Puntaje</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- VISTA -->
-                        <tr>
-                            <td rowspan="1"><b>VISTA</b></td>
-                            <td><b>PUREZA</b></td>
-                            <td>Limpidez, sin partículas</td>
-                            <td>
+                    <div class="scroll-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Categoría</th>
+                                    <th>Subcriterio</th>
+                                    <th>Descripción</th>
+                                    <th>Puntaje</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- VISTA -->
+                                <tr>
+                                    <td rowspan="1"><b>VISTA</b></td>
+                                    <td><b>PUREZA</b></td>
+                                    <td>Limpidez, sin partículas</td>
+                                    <td>
                                         <select name="pureza" required>
                                             <option value="">Seleccionar</option>
-                                    {% for val in puntajes.pureza %}
-                                            <option value="{{ val }}">{{ val }}</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                        </tr>
-                        <!-- OLFATO -->
-                        <tr>
-                            <td rowspan="2"><b>OLFATO</b></td>
-                            <td><b>INTENSIDAD</b></td>
-                            <td>Fuerza y persistencia del aroma</td>
-                            <td>
+                                            {% for val in puntajes.pureza %}
+                                                <option value="{{ val }}">{{ val }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                </tr>
+                                <!-- OLFATO -->
+                                <tr>
+                                    <td rowspan="2"><b>OLFATO</b></td>
+                                    <td><b>INTENSIDAD</b></td>
+                                    <td>Fuerza y persistencia del aroma</td>
+                                    <td>
                                         <select name="olfato_intensidad" required>
                                             <option value="">Seleccionar</option>
-                                    {% for val in puntajes.olfato_intensidad %}
-                                            <option value="{{ val }}">{{ val }}</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><b>COMPLEJIDAD</b></td>
-                            <td>Variedad de aromas, elegancia y finura</td>
-                            <td>
+                                            {% for val in puntajes.olfato_intensidad %}
+                                                <option value="{{ val }}">{{ val }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><b>COMPLEJIDAD</b></td>
+                                    <td>Variedad de aromas, elegancia y finura</td>
+                                    <td>
                                         <select name="olfato_complejidad" required>
                                             <option value="">Seleccionar</option>
-                                    {% for val in puntajes.olfato_complejidad %}
-                                            <option value="{{ val }}">{{ val }}</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                        </tr>
-                        <!-- GUSTO -->
-                        <tr>
-                            <td rowspan="3"><b>GUSTO</b></td>
-                            <td><b>INTENSIDAD</b></td>
-                            <td>Fuerza de los sabores y primera entrada</td>
-                            <td>
+                                            {% for val in puntajes.olfato_complejidad %}
+                                                <option value="{{ val }}">{{ val }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                </tr>
+                                <!-- GUSTO -->
+                                <tr>
+                                    <td rowspan="3"><b>GUSTO</b></td>
+                                    <td><b>INTENSIDAD</b></td>
+                                    <td>Fuerza de los sabores y primera entrada</td>
+                                    <td>
                                         <select name="gusto_intensidad" required>
                                             <option value="">Seleccionar</option>
-                                    {% for val in puntajes.gusto_intensidad %}
-                                            <option value="{{ val }}">{{ val }}</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><b>COMPLEJIDAD</b></td>
-                            <td>Variedad de sabores, elegancia y finura</td>
-                            <td>
+                                            {% for val in puntajes.gusto_intensidad %}
+                                                <option value="{{ val }}">{{ val }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><b>COMPLEJIDAD</b></td>
+                                    <td>Variedad de sabores, elegancia y finura</td>
+                                    <td>
                                         <select name="gusto_complejidad" required>
                                             <option value="">Seleccionar</option>
-                                    {% for val in puntajes.gusto_complejidad %}
-                                            <option value="{{ val }}">{{ val }}</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><b>PERSISTENCIA</b></td>
-                            <td>Duración de la sensación remanente en la boca</td>
-                            <td>
+                                            {% for val in puntajes.gusto_complejidad %}
+                                                <option value="{{ val }}">{{ val }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><b>PERSISTENCIA</b></td>
+                                    <td>Duración de la sensación remanente en la boca</td>
+                                    <td>
                                         <select name="gusto_persistencia" required>
                                             <option value="">Seleccionar</option>
-                                    {% for val in puntajes.gusto_persistencia %}
-                                            <option value="{{ val }}">{{ val }}</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                        </tr>
-                        <!-- JUICIO GLOBAL -->
-                        <tr>
-                            <td rowspan="1"><b>JUICIO GLOBAL</b></td>
-                            <td><b>ARMONÍA</b></td>
-                            <td>Apreciación General</td>
-                            <td>
+                                            {% for val in puntajes.gusto_persistencia %}
+                                                <option value="{{ val }}">{{ val }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                </tr>
+                                <!-- JUICIO GLOBAL -->
+                                <tr>
+                                    <td rowspan="1"><b>JUICIO GLOBAL</b></td>
+                                    <td><b>ARMONÍA</b></td>
+                                    <td>Apreciación General</td>
+                                    <td>
                                         <select name="armonia" required>
                                             <option value="">Seleccionar</option>
-                                    {% for val in puntajes.armonia %}
-                                            <option value="{{ val }}">{{ val }}</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+                                            {% for val in puntajes.armonia %}
+                                                <option value="{{ val }}">{{ val }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- Notas finales (solo en el último paso) -->
@@ -191,7 +191,6 @@
                 {% endif %}
 
                 <!-- Botones de navegación -->
-                {% if not nombre or nombre.lower() != 'pedroadmin' %}
                 <div class="navigation-buttons">
                     {% if paso_actual > 1 %}
                         <button type="submit" name="accion" value="anterior" class="btn-secondary">
@@ -261,7 +260,7 @@
                             </table>
                         </div>
                     </div>
-        {% endfor %}
+                {% endfor %}
             </div>
         </div>
         {% endif %}
@@ -277,8 +276,6 @@
                 .then(response => response.json())
                 .then(datos => {
                     if (Object.keys(datos).length > 0) {
-                        // Aquí actualizaríamos solo la sección de resultados
-                        // Por simplicidad, recargamos la página cada 30 segundos
                         console.log('Datos actualizados:', datos);
                     }
                 })

@@ -35,39 +35,49 @@ RONES = ["A", "B", "C", "D"]
 def cargar_datos():
     """Carga los datos desde Supabase"""
     try:
+        print("Iniciando carga de datos desde Supabase")
         datos = {}
         
         # Cargar datos de cada tabla de ron
         for ron in RONES:
             tabla = f'catas_{ron.lower()}'
-            response = supabase.table(tabla).select('*').order('timestamp', desc=True).execute()
-            
-            for cata in response.data:
-                nombre = cata['nombre']
-                if nombre not in datos:
-                    datos[nombre] = {"nombre": nombre}
+            print(f"Cargando datos de tabla {tabla}")
+            try:
+                response = supabase.table(tabla).select('*').order('timestamp', desc=True).execute()
+                print(f"Respuesta de {tabla}: {len(response.data)} registros")
                 
-                # Solo actualizar si no existe una entrada más reciente para este nombre
-                if ron not in datos[nombre]:
-                    datos[nombre][ron] = {
-                        "pureza": cata['pureza'],
-                        "olfato_intensidad": cata['olfato_intensidad'],
-                        "olfato_complejidad": cata['olfato_complejidad'],
-                        "gusto_intensidad": cata['gusto_intensidad'],
-                        "gusto_complejidad": cata['gusto_complejidad'],
-                        "gusto_persistencia": cata['gusto_persistencia'],
-                        "armonia": cata['armonia'],
-                        "total": cata['total'],
-                        "timestamp": cata['timestamp']
-                    }
+                for cata in response.data:
+                    nombre = cata['nombre']
+                    if nombre not in datos:
+                        datos[nombre] = {"nombre": nombre}
                     
-                    # Solo guardar notas de la última tabla (Ron D)
-                    if ron == RONES[-1] and cata.get('notas'):
-                        datos[nombre]["notas"] = cata['notas']
+                    # Solo actualizar si no existe una entrada más reciente para este nombre
+                    if ron not in datos[nombre]:
+                        datos[nombre][ron] = {
+                            "pureza": cata['pureza'],
+                            "olfato_intensidad": cata['olfato_intensidad'],
+                            "olfato_complejidad": cata['olfato_complejidad'],
+                            "gusto_intensidad": cata['gusto_intensidad'],
+                            "gusto_complejidad": cata['gusto_complejidad'],
+                            "gusto_persistencia": cata['gusto_persistencia'],
+                            "armonia": cata['armonia'],
+                            "total": cata['total'],
+                            "timestamp": cata['timestamp']
+                        }
+                        
+                        # Solo guardar notas de la última tabla (Ron D)
+                        if ron == RONES[-1] and cata.get('notas'):
+                            datos[nombre]["notas"] = cata['notas']
+            except Exception as e:
+                print(f"Error cargando tabla {tabla}: {str(e)}")
+                continue
         
+        print(f"Carga de datos completada: {len(datos)} usuarios")
         return datos
     except Exception as e:
-        print(f"Error cargando datos de Supabase: {e}")
+        print(f"Error general en cargar_datos(): {str(e)}")
+        import traceback
+        traceback.print_exc()
         return {}
 
 def guardar_datos(datos):
@@ -152,36 +162,55 @@ def validar_numero(valor, default=0):
 @app.route("/", methods=["GET", "POST"])
 def index():
     try:
+        print("Iniciando ruta index()")
         datos = cargar_datos()
+        print(f"Datos cargados: {len(datos)} registros")
         
         # Obtener el paso actual de la URL o del formulario
         if request.method == "POST":
+            print("Método POST detectado")
             # Si es POST, obtener el paso del formulario
-            paso_actual = int(request.form.get('paso_actual', 1))
+            try:
+                paso_actual = int(request.form.get('paso_actual', 1))
+            except ValueError as e:
+                print(f"Error al convertir paso_actual: {e}")
+                paso_actual = 1
+                
             accion = request.form.get("accion", "")
             nombre = request.form.get("nombre", "").strip()
+            print(f"POST - Nombre: {nombre}, Acción: {accion}, Paso: {paso_actual}")
             
             # Si es pedroadmin y la acción es borrar
-            if nombre.lower() == "pedroadmin" and accion.startswith("borrar"):
+            if nombre and nombre.lower() == "pedroadmin" and accion.startswith("borrar"):
+                print(f"Procesando acción de borrado: {accion}")
                 try:
                     if accion == "borrar_todo":
+                        print("Iniciando borrado de todos los datos")
                         # Eliminar todos los registros de todas las tablas
                         for ron in RONES:
                             tabla = f'catas_{ron.lower()}'
+                            print(f"Borrando tabla {tabla}")
                             response = supabase.table(tabla).delete().neq('id', 0).execute()
+                            print(f"Respuesta de borrado {tabla}: {response}")
                         mensaje = "Todos los datos han sido eliminados correctamente"
                     elif accion == "borrar_ron":
+                        print("Iniciando borrado de ron específico")
                         # Eliminar registros de una tabla específica
                         ron_especifico = request.form.get("ron_especifico")
+                        print(f"Ron específico a borrar: {ron_especifico}")
                         if ron_especifico in RONES:
                             tabla = f'catas_{ron_especifico.lower()}'
+                            print(f"Borrando tabla {tabla}")
                             response = supabase.table(tabla).delete().neq('id', 0).execute()
+                            print(f"Respuesta de borrado {tabla}: {response}")
                             mensaje = f"Datos de la Muestra {RONES.index(ron_especifico) + 1} eliminados correctamente"
                         else:
-                            raise Exception("Muestra no válida")
+                            raise Exception(f"Muestra no válida: {ron_especifico}")
                     
                     # Recargar datos después de borrar
+                    print("Recargando datos después del borrado")
                     datos = cargar_datos()
+                    print(f"Datos recargados: {len(datos)} registros")
                     return render_template("index.html", 
                                          puntajes=PUNTAJES, 
                                          rones=RONES, 
@@ -190,16 +219,20 @@ def index():
                                          nombre=nombre,
                                          success=mensaje)
                 except Exception as e:
+                    print(f"Error durante el borrado: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
                     return render_template("index.html", 
                                          puntajes=PUNTAJES, 
                                          rones=RONES, 
                                          paso_actual=paso_actual,
                                          datos=datos,
                                          nombre=nombre,
-                                         error=f"Error al eliminar datos: {e}")
+                                         error=f"Error al eliminar datos: {str(e)}")
             
             # Si es pedroadmin, no procesar el formulario normal
-            if nombre.lower() == "pedroadmin":
+            if nombre and nombre.lower() == "pedroadmin":
+                print("Usuario pedroadmin detectado, omitiendo procesamiento de formulario")
                 return render_template("index.html", 
                                      puntajes=PUNTAJES, 
                                      rones=RONES, 
@@ -330,7 +363,7 @@ def index():
                              nombre=nombre)
                              
     except Exception as e:
-        print(f"Error en index(): {str(e)}")
+        print(f"Error general en index(): {str(e)}")
         import traceback
         traceback.print_exc()
         return render_template("index.html", 
@@ -338,6 +371,7 @@ def index():
                              rones=RONES, 
                              paso_actual=1,
                              datos={},
+                             nombre="",
                              error=f"Error interno: {str(e)}")
 
 @app.route("/resultados")

@@ -1,14 +1,10 @@
 from flask import Flask, render_template, request, jsonify, session
-from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import os
 from dotenv import load_dotenv
-from sqlalchemy import event, create_engine
-from sqlalchemy.engine import Engine
-import sqlite3
-import urllib.parse
 import time
-from sqlalchemy.pool import QueuePool
+from supabase import create_client, Client
+import json
 
 # Load environment variables
 load_dotenv()
@@ -16,109 +12,12 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = 'cata_ron_secret_key_2024'
 
-# PostgreSQL configuration with Supabase
-DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://postgres:BRevIdsERoclrtgf@db.jpdizuizmhqmellbhniz.supabase.co:5432/postgres')
+# Supabase configuration
+SUPABASE_URL = "https://jpdizuizmhqmellbhniz.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwZGl6dWl6bWhxbWVsbGJobml6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwMzQ1ODYsImV4cCI6MjA2NTYxMDU4Nn0.theNyi8_x76eyC5cAu7uQAbsS_cGGZmghVLCzRy6_hI"
 
-# Parse the connection URL and add required parameters
-parsed = urllib.parse.urlparse(DATABASE_URL)
-# Add SSL mode and other required parameters
-DATABASE_URL = urllib.parse.urlunparse(parsed._replace(
-    query=urllib.parse.urlencode({
-        'sslmode': 'require',
-        'connect_timeout': '5',
-        'application_name': 'cata_ron_app',
-        'options': '-c statement_timeout=5000'
-    })
-))
-
-# Configure SQLAlchemy with serverless-optimized settings
-app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'poolclass': QueuePool,
-    'pool_size': 1,  # Minimal pool size for serverless
-    'max_overflow': 0,  # No overflow connections
-    'pool_timeout': 5,  # Short timeout
-    'pool_recycle': 300,  # Recycle connections every 5 minutes
-    'pool_pre_ping': True,  # Verify connections before using
-    'connect_args': {
-        'connect_timeout': 5,
-        'keepalives': 1,
-        'keepalives_idle': 30,
-        'keepalives_interval': 10,
-        'keepalives_count': 5,
-        'application_name': 'cata_ron_app'
-    }
-}
-
-# Create engine with retry logic
-def get_engine():
-    max_retries = 3
-    retry_delay = 1
-    
-    for attempt in range(max_retries):
-        try:
-            engine = create_engine(
-                app.config['SQLALCHEMY_DATABASE_URI'],
-                **app.config['SQLALCHEMY_ENGINE_OPTIONS']
-            )
-            # Test the connection
-            with engine.connect() as conn:
-                conn.execute("SELECT 1")
-            return engine
-        except Exception as e:
-            if attempt == max_retries - 1:
-                raise
-            print(f"Connection attempt {attempt + 1} failed: {e}")
-            time.sleep(retry_delay * (attempt + 1))
-
-# Initialize SQLAlchemy with our custom engine
-db = SQLAlchemy(app, engine_options=app.config['SQLALCHEMY_ENGINE_OPTIONS'])
-
-# Model for catas
-class Cata(db.Model):
-    __tablename__ = 'catas'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(100), nullable=False, index=True)
-    ron = db.Column(db.String(1), nullable=False, index=True)
-    pureza = db.Column(db.Integer, default=0)
-    olfato_intensidad = db.Column(db.Integer, default=0)
-    olfato_complejidad = db.Column(db.Integer, default=0)
-    gusto_intensidad = db.Column(db.Integer, default=0)
-    gusto_complejidad = db.Column(db.Integer, default=0)
-    gusto_persistencia = db.Column(db.Integer, default=0)
-    armonia = db.Column(db.Integer, default=0)
-    total = db.Column(db.Integer, default=0)
-    notas = db.Column(db.Text)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-
-    __table_args__ = (
-        db.UniqueConstraint('nombre', 'ron', name='unique_cata_ron'),
-        db.Index('idx_nombre_ron', 'nombre', 'ron'),
-    )
-
-# Initialize database with retry logic
-def init_db():
-    max_retries = 3
-    retry_delay = 1
-    
-    for attempt in range(max_retries):
-        try:
-            with app.app_context():
-                # Create tables if they don't exist
-                db.create_all()
-                print("Database initialized successfully")
-                return
-        except Exception as e:
-            if attempt == max_retries - 1:
-                print(f"Failed to initialize database after {max_retries} attempts: {e}")
-                raise
-            print(f"Database initialization attempt {attempt + 1} failed: {e}")
-            time.sleep(retry_delay * (attempt + 1))
-
-# Initialize the database
-init_db()
+# Initialize Supabase client
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Puntuaciones fijas por criterio
 PUNTAJES = {
@@ -134,80 +33,79 @@ PUNTAJES = {
 RONES = ["A", "B", "C", "D"]
 
 def cargar_datos():
-    """Carga los datos desde PostgreSQL"""
+    """Carga los datos desde Supabase"""
     try:
-        with db.session.begin():
-            # Obtener todas las catas con ordenamiento
-            catas = Cata.query.order_by(Cata.nombre, Cata.ron).all()
+        # Obtener todas las catas
+        response = supabase.table('catas').select('*').execute()
+        
+        # Convertir a diccionario
+        datos = {}
+        for cata in response.data:
+            if cata['nombre'] not in datos:
+                datos[cata['nombre']] = {"nombre": cata['nombre']}
             
-            # Convertir a diccionario
-            datos = {}
-            for cata in catas:
-                if cata.nombre not in datos:
-                    datos[cata.nombre] = {"nombre": cata.nombre}
-                
-                datos[cata.nombre][cata.ron] = {
-                    "pureza": cata.pureza,
-                    "olfato_intensidad": cata.olfato_intensidad,
-                    "olfato_complejidad": cata.olfato_complejidad,
-                    "gusto_intensidad": cata.gusto_intensidad,
-                    "gusto_complejidad": cata.gusto_complejidad,
-                    "gusto_persistencia": cata.gusto_persistencia,
-                    "armonia": cata.armonia,
-                    "total": cata.total,
-                    "timestamp": cata.timestamp.isoformat()
-                }
-                
-                if cata.notas:
-                    datos[cata.nombre]["notas"] = cata.notas
+            datos[cata['nombre']][cata['ron']] = {
+                "pureza": cata['pureza'],
+                "olfato_intensidad": cata['olfato_intensidad'],
+                "olfato_complejidad": cata['olfato_complejidad'],
+                "gusto_intensidad": cata['gusto_intensidad'],
+                "gusto_complejidad": cata['gusto_complejidad'],
+                "gusto_persistencia": cata['gusto_persistencia'],
+                "armonia": cata['armonia'],
+                "total": cata['total'],
+                "timestamp": cata['timestamp']
+            }
             
-            return datos
+            if cata.get('notas'):
+                datos[cata['nombre']]["notas"] = cata['notas']
+        
+        return datos
     except Exception as e:
-        db.session.rollback()
-        print(f"Error cargando datos de PostgreSQL: {e}")
+        print(f"Error cargando datos de Supabase: {e}")
         return {}
 
 def guardar_datos(datos):
-    """Guarda los datos en PostgreSQL"""
+    """Guarda los datos en Supabase"""
     max_intentos = 3
     intento = 0
     
     while intento < max_intentos:
         try:
-            with db.session.begin():
-                for nombre, datos_usuario in datos.items():
-                    for ron in RONES:
-                        if ron in datos_usuario:
-                            puntuaciones = datos_usuario[ron]
-                            
-                            # Buscar o crear registro
-                            cata = Cata.query.filter_by(nombre=nombre, ron=ron).first()
-                            if not cata:
-                                cata = Cata(nombre=nombre, ron=ron)
-                            
-                            # Actualizar puntuaciones
-                            cata.pureza = puntuaciones.get("pureza", 0)
-                            cata.olfato_intensidad = puntuaciones.get("olfato_intensidad", 0)
-                            cata.olfato_complejidad = puntuaciones.get("olfato_complejidad", 0)
-                            cata.gusto_intensidad = puntuaciones.get("gusto_intensidad", 0)
-                            cata.gusto_complejidad = puntuaciones.get("gusto_complejidad", 0)
-                            cata.gusto_persistencia = puntuaciones.get("gusto_persistencia", 0)
-                            cata.armonia = puntuaciones.get("armonia", 0)
-                            cata.total = puntuaciones.get("total", 0)
-                            
-                            if "notas" in datos_usuario and ron == RONES[-1]:
-                                cata.notas = datos_usuario["notas"]
-                            
-                            db.session.add(cata)
-                
-                db.session.commit()
-                return  # Éxito, salir del bucle
+            for nombre, datos_usuario in datos.items():
+                for ron in RONES:
+                    if ron in datos_usuario:
+                        puntuaciones = datos_usuario[ron]
+                        
+                        # Preparar datos para insertar/actualizar
+                        cata_data = {
+                            "nombre": nombre,
+                            "ron": ron,
+                            "pureza": puntuaciones.get("pureza", 0),
+                            "olfato_intensidad": puntuaciones.get("olfato_intensidad", 0),
+                            "olfato_complejidad": puntuaciones.get("olfato_complejidad", 0),
+                            "gusto_intensidad": puntuaciones.get("gusto_intensidad", 0),
+                            "gusto_complejidad": puntuaciones.get("gusto_complejidad", 0),
+                            "gusto_persistencia": puntuaciones.get("gusto_persistencia", 0),
+                            "armonia": puntuaciones.get("armonia", 0),
+                            "total": puntuaciones.get("total", 0),
+                            "timestamp": datetime.utcnow().isoformat()
+                        }
+                        
+                        if "notas" in datos_usuario and ron == RONES[-1]:
+                            cata_data["notas"] = datos_usuario["notas"]
+                        
+                        # Intentar actualizar primero
+                        response = supabase.table('catas').upsert(cata_data).execute()
+                        
+                        if not response.data:
+                            raise Exception("No se pudo guardar los datos")
+            
+            return  # Éxito, salir del bucle
                 
         except Exception as e:
-            db.session.rollback()
             intento += 1
             if intento == max_intentos:
-                print(f"Error guardando datos en PostgreSQL después de {max_intentos} intentos: {e}")
+                print(f"Error guardando datos en Supabase después de {max_intentos} intentos: {e}")
                 raise
             print(f"Intento {intento} fallido, reintentando...")
             time.sleep(0.1 * intento)  # Esperar un poco más entre intentos
@@ -274,7 +172,7 @@ def index():
             if paso_actual == len(RONES):
                 datos[nombre]["notas"] = request.form.get("notas", "")
             
-            # Guardar en PostgreSQL
+            # Guardar en Supabase
             guardar_datos(datos)
             
             # Determinar siguiente acción
@@ -336,9 +234,8 @@ def resultados():
 def reset():
     """Endpoint para limpiar todos los datos (solo para desarrollo)"""
     try:
-        with app.app_context():
-            db.drop_all()
-            db.create_all()
+        # Eliminar todos los registros de la tabla catas
+        response = supabase.table('catas').delete().neq('id', 0).execute()
         return "Datos limpiados correctamente"
     except Exception as e:
         return f"Error al limpiar datos: {str(e)}"
@@ -349,7 +246,7 @@ def debug():
     try:
         datos = cargar_datos()
         return {
-            "total_catas": Cata.query.count(),
+            "total_catas": len(datos),
             "datos": datos
         }
     except Exception as e:

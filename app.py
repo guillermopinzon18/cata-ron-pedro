@@ -35,29 +35,31 @@ RONES = ["A", "B", "C", "D"]
 def cargar_datos():
     """Carga los datos desde Supabase"""
     try:
-        # Obtener todas las catas
-        response = supabase.table('catas').select('*').execute()
+        # Obtener todas las catas, ordenadas por timestamp descendente
+        response = supabase.table('catas').select('*').order('timestamp', desc=True).execute()
         
-        # Convertir a diccionario
+        # Convertir a diccionario, tomando solo la entrada más reciente para cada combinación nombre-ron
         datos = {}
         for cata in response.data:
             if cata['nombre'] not in datos:
                 datos[cata['nombre']] = {"nombre": cata['nombre']}
             
-            datos[cata['nombre']][cata['ron']] = {
-                "pureza": cata['pureza'],
-                "olfato_intensidad": cata['olfato_intensidad'],
-                "olfato_complejidad": cata['olfato_complejidad'],
-                "gusto_intensidad": cata['gusto_intensidad'],
-                "gusto_complejidad": cata['gusto_complejidad'],
-                "gusto_persistencia": cata['gusto_persistencia'],
-                "armonia": cata['armonia'],
-                "total": cata['total'],
-                "timestamp": cata['timestamp']
-            }
-            
-            if cata.get('notas'):
-                datos[cata['nombre']]["notas"] = cata['notas']
+            # Solo actualizar si no existe una entrada más reciente para este nombre-ron
+            if cata['ron'] not in datos[cata['nombre']]:
+                datos[cata['nombre']][cata['ron']] = {
+                    "pureza": cata['pureza'],
+                    "olfato_intensidad": cata['olfato_intensidad'],
+                    "olfato_complejidad": cata['olfato_complejidad'],
+                    "gusto_intensidad": cata['gusto_intensidad'],
+                    "gusto_complejidad": cata['gusto_complejidad'],
+                    "gusto_persistencia": cata['gusto_persistencia'],
+                    "armonia": cata['armonia'],
+                    "total": cata['total'],
+                    "timestamp": cata['timestamp']
+                }
+                
+                if cata.get('notas'):
+                    datos[cata['nombre']]["notas"] = cata['notas']
         
         return datos
     except Exception as e:
@@ -85,7 +87,7 @@ def guardar_datos(datos):
                 
                 puntuaciones = datos_usuario[ron_actual]
                 
-                # Preparar datos para insertar/actualizar
+                # Preparar datos para insertar
                 cata_data = {
                     "nombre": nombre,
                     "ron": ron_actual,
@@ -105,8 +107,8 @@ def guardar_datos(datos):
                 
                 print(f"Intentando guardar datos para {nombre}, ron {ron_actual}: {cata_data}")
                 
-                # Intentar actualizar primero
-                response = supabase.table('catas').upsert(cata_data).execute()
+                # Insertar nuevo registro
+                response = supabase.table('catas').insert(cata_data).execute()
                 
                 if not response.data:
                     print(f"Respuesta de Supabase al guardar: {response}")

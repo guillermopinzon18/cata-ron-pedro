@@ -181,15 +181,6 @@
                     </div>
                 </div>
 
-                <!-- Notas finales (solo en el último paso) -->
-                {% if paso_actual == rones|length %}
-                <div class="notas">
-                    <label for="notas">📝 NOTAS DE CATA:</label>
-                    <textarea name="notas" id="notas" rows="3" 
-                             placeholder="Comparte tus impresiones generales sobre la cata..."></textarea>
-                </div>
-                {% endif %}
-
                 <!-- Botones de navegación -->
                 <div class="navigation-buttons">
                     {% if paso_actual > 1 %}

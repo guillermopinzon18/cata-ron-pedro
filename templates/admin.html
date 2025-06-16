@@ -18,8 +18,9 @@
             <div class="alert error">{{ error }}</div>
         {% endif %}
         {% for ron in rones %}
+        {% set muestra_idx = loop.index %}
         <div class="resultado-ron">
-            <h3>Muestra {{ loop.index }}</h3>
+            <h3>Muestra {{ muestra_idx }}</h3>
             <div class="tabla-responsive">
                 <table class="resultados-tabla">
                     <thead>
@@ -57,7 +58,7 @@
                                     <form method="POST" style="display: inline;">
                                         <input type="hidden" name="ron_especifico" value="{{ ron }}">
                                         <input type="hidden" name="nombre_usuario" value="{{ nombre_usuario }}">
-                                        <button type="submit" class="btn-refresh" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;" onclick="return confirm('¿Eliminar puntuación de {{ nombre_usuario }} en Muestra {{ loop.parent.index }}?')">🗑️</button>
+                                        <button type="submit" class="btn-refresh" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;" onclick="return confirm('¿Eliminar puntuación de {{ nombre_usuario }} en Muestra {{ muestra_idx }}?')">🗑️</button>
                                     </form>
                                 </td>
                             </tr>

@@ -189,6 +189,17 @@
             <div class="refresh-info">
                 <small>Se actualiza automáticamente cada 10 segundos</small>
                 <button onclick="actualizarResultados()" class="btn-refresh">🔄 Actualizar</button>
+                {% if nombre and nombre.lower() == 'pedroadmin' %}
+                <form method="POST" style="display: inline;">
+                    <input type="hidden" name="nombre" value="{{ nombre }}">
+                    <input type="hidden" name="paso_actual" value="{{ paso_actual }}">
+                    <button type="submit" name="accion" value="borrar" class="btn-refresh" 
+                            onclick="return confirm('¿Estás seguro de que deseas eliminar todos los datos?')"
+                            style="background: #dc3545; margin-left: 10px;">
+                        🗑️ Eliminar Todos los Datos
+                    </button>
+                </form>
+                {% endif %}
             </div>
             
             <div id="resultados-container">

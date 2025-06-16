@@ -260,7 +260,8 @@ def index():
                                      paso_actual=paso_actual,
                                      datos=datos,
                                      nombre=nombre,
-                                     puntuaciones_previas=puntuaciones_previas)
+                                     puntuaciones_previas=puntuaciones_previas,
+                                     solo_navegacion=True)
         else:
             # Si es GET, obtener el paso de la URL
             paso_actual = int(request.args.get('paso', 1))

@@ -1,10 +1,65 @@
 from flask import Flask, render_template, request, jsonify, session
-import json
-import os
+from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+import os
+from dotenv import load_dotenv
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
+import sqlite3
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = 'cata_ron_secret_key_2024'  # Necesario para sessions
+app.secret_key = 'cata_ron_secret_key_2024'
+
+# PostgreSQL configuration with Supabase
+DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://postgres:BRevIdsERoclrtgf@db.jpdizuizmhqmellbhniz.supabase.co:5432/postgres')
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_size': 20,
+    'max_overflow': 10,
+    'pool_timeout': 30,
+    'pool_recycle': 1800,
+}
+
+db = SQLAlchemy(app)
+
+# Configurar SQLite para mejor concurrencia
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    if isinstance(dbapi_connection, sqlite3.Connection):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")  # Write-Ahead Logging para mejor concurrencia
+        cursor.execute("PRAGMA synchronous=NORMAL")  # Balance entre seguridad y rendimiento
+        cursor.execute("PRAGMA busy_timeout=5000")  # Esperar hasta 5 segundos si la BD está bloqueada
+        cursor.close()
+
+# Modelo para las catas
+class Cata(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(100), nullable=False, index=True)  # Índice para búsquedas más rápidas
+    ron = db.Column(db.String(1), nullable=False, index=True)
+    pureza = db.Column(db.Integer, default=0)
+    olfato_intensidad = db.Column(db.Integer, default=0)
+    olfato_complejidad = db.Column(db.Integer, default=0)
+    gusto_intensidad = db.Column(db.Integer, default=0)
+    gusto_complejidad = db.Column(db.Integer, default=0)
+    gusto_persistencia = db.Column(db.Integer, default=0)
+    armonia = db.Column(db.Integer, default=0)
+    total = db.Column(db.Integer, default=0)
+    notas = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('nombre', 'ron', name='unique_cata_ron'),
+        db.Index('idx_nombre_ron', 'nombre', 'ron'),  # Índice compuesto para búsquedas más eficientes
+    )
+
+# Crear las tablas
+with app.app_context():
+    db.create_all()
 
 # Puntuaciones fijas por criterio
 PUNTAJES = {
@@ -18,42 +73,86 @@ PUNTAJES = {
 }
 
 RONES = ["A", "B", "C", "D"]
-DATA_FILE = "/tmp/cata_data.json"  # Usar directorio temporal en Vercel
-
-# Variable global para almacenar datos en memoria como respaldo
-DATOS_MEMORIA = {}
 
 def cargar_datos():
-    """Carga los datos del archivo JSON o de memoria"""
-    global DATOS_MEMORIA
-    
-    # Intentar cargar desde archivo
-    if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                DATOS_MEMORIA.update(data)  # Actualizar memoria
-                return data
-        except Exception as e:
-            print(f"Error cargando archivo: {e}")
-    
-    # Si no se puede cargar desde archivo, usar memoria
-    return DATOS_MEMORIA.copy()
+    """Carga los datos desde PostgreSQL"""
+    try:
+        with db.session.begin():
+            # Obtener todas las catas con ordenamiento
+            catas = Cata.query.order_by(Cata.nombre, Cata.ron).all()
+            
+            # Convertir a diccionario
+            datos = {}
+            for cata in catas:
+                if cata.nombre not in datos:
+                    datos[cata.nombre] = {"nombre": cata.nombre}
+                
+                datos[cata.nombre][cata.ron] = {
+                    "pureza": cata.pureza,
+                    "olfato_intensidad": cata.olfato_intensidad,
+                    "olfato_complejidad": cata.olfato_complejidad,
+                    "gusto_intensidad": cata.gusto_intensidad,
+                    "gusto_complejidad": cata.gusto_complejidad,
+                    "gusto_persistencia": cata.gusto_persistencia,
+                    "armonia": cata.armonia,
+                    "total": cata.total,
+                    "timestamp": cata.timestamp.isoformat()
+                }
+                
+                if cata.notas:
+                    datos[cata.nombre]["notas"] = cata.notas
+            
+            return datos
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error cargando datos de PostgreSQL: {e}")
+        return {}
 
 def guardar_datos(datos):
-    """Guarda los datos en archivo y memoria"""
-    global DATOS_MEMORIA
+    """Guarda los datos en PostgreSQL"""
+    max_intentos = 3
+    intento = 0
     
-    # Siempre guardar en memoria
-    DATOS_MEMORIA.update(datos)
-    
-    # Intentar guardar en archivo (puede fallar en Vercel)
-    try:
-        with open(DATA_FILE, 'w', encoding='utf-8') as f:
-            json.dump(datos, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        print(f"Warning: No se pudo guardar en archivo: {e}")
-        # No importa si falla, los datos están en memoria
+    while intento < max_intentos:
+        try:
+            with db.session.begin():
+                for nombre, datos_usuario in datos.items():
+                    for ron in RONES:
+                        if ron in datos_usuario:
+                            puntuaciones = datos_usuario[ron]
+                            
+                            # Buscar o crear registro
+                            cata = Cata.query.filter_by(nombre=nombre, ron=ron).first()
+                            if not cata:
+                                cata = Cata(nombre=nombre, ron=ron)
+                            
+                            # Actualizar puntuaciones
+                            cata.pureza = puntuaciones.get("pureza", 0)
+                            cata.olfato_intensidad = puntuaciones.get("olfato_intensidad", 0)
+                            cata.olfato_complejidad = puntuaciones.get("olfato_complejidad", 0)
+                            cata.gusto_intensidad = puntuaciones.get("gusto_intensidad", 0)
+                            cata.gusto_complejidad = puntuaciones.get("gusto_complejidad", 0)
+                            cata.gusto_persistencia = puntuaciones.get("gusto_persistencia", 0)
+                            cata.armonia = puntuaciones.get("armonia", 0)
+                            cata.total = puntuaciones.get("total", 0)
+                            
+                            if "notas" in datos_usuario and ron == RONES[-1]:
+                                cata.notas = datos_usuario["notas"]
+                            
+                            db.session.add(cata)
+                
+                db.session.commit()
+                return  # Éxito, salir del bucle
+                
+        except Exception as e:
+            db.session.rollback()
+            intento += 1
+            if intento == max_intentos:
+                print(f"Error guardando datos en PostgreSQL después de {max_intentos} intentos: {e}")
+                raise
+            print(f"Intento {intento} fallido, reintentando...")
+            import time
+            time.sleep(0.1 * intento)  # Esperar un poco más entre intentos
 
 def validar_numero(valor, default=0):
     """Convierte un valor a entero de forma segura"""
@@ -75,7 +174,7 @@ def index():
             paso_actual = 1
         elif paso_actual > len(RONES):
             paso_actual = len(RONES)
-        
+    
         if request.method == "POST":
             nombre = request.form.get("nombre", "").strip()
             if not nombre:
@@ -86,18 +185,11 @@ def index():
                                      datos=datos,
                                      error="Por favor ingresa tu nombre")
             
-            # Crear estructura de usuario si no existe
-            if nombre not in datos:
-                datos[nombre] = {}
-            
             # Obtener el ron actual basado en el paso
             ron_actual = RONES[paso_actual - 1]
             
-            print(f"DEBUG: Guardando datos para {nombre} - Ron {ron_actual}")
-            print(f"DEBUG: Datos actuales: {json.dumps(datos[nombre], indent=2)}")
-            
-            # Guardar las puntuaciones del ron actual con validación
-            datos[nombre][ron_actual] = {
+            # Crear o actualizar el documento del usuario
+            puntuaciones = {
                 "pureza": validar_numero(request.form.get("pureza")),
                 "olfato_intensidad": validar_numero(request.form.get("olfato_intensidad")),
                 "olfato_complejidad": validar_numero(request.form.get("olfato_complejidad")),
@@ -109,24 +201,27 @@ def index():
             }
             
             # Calcular total
-            datos[nombre][ron_actual]["total"] = sum([
-                datos[nombre][ron_actual][k] for k in datos[nombre][ron_actual] 
+            puntuaciones["total"] = sum([
+                puntuaciones[k] for k in puntuaciones 
                 if k not in ["timestamp", "total"]
             ])
+            
+            # Actualizar datos en memoria
+            if nombre not in datos:
+                datos[nombre] = {"nombre": nombre}
+            
+            datos[nombre][ron_actual] = puntuaciones
             
             # Guardar notas si es el último paso
             if paso_actual == len(RONES):
                 datos[nombre]["notas"] = request.form.get("notas", "")
             
-            # Guardar datos
+            # Guardar en PostgreSQL
             guardar_datos(datos)
-            
-            print(f"DEBUG: Datos después de guardar: {json.dumps(datos[nombre], indent=2)}")
             
             # Determinar siguiente acción
             accion = request.form.get("accion", "")
             if accion == "siguiente" and paso_actual < len(RONES):
-                # Redirigir con nuevo paso
                 return render_template("index.html", 
                                      puntajes=PUNTAJES, 
                                      rones=RONES, 
@@ -135,7 +230,6 @@ def index():
                                      nombre=nombre,
                                      success=f"Muestra {paso_actual} guardada correctamente")
             elif accion == "anterior" and paso_actual > 1:
-                # Redirigir con paso anterior
                 return render_template("index.html", 
                                      puntajes=PUNTAJES, 
                                      rones=RONES, 
@@ -143,7 +237,6 @@ def index():
                                      datos=datos,
                                      nombre=nombre)
             elif accion == "finalizar":
-                # Cata completada
                 return render_template("index.html", 
                                      puntajes=PUNTAJES, 
                                      rones=RONES, 
@@ -161,12 +254,9 @@ def index():
                              nombre=request.args.get('nombre', ''))
                              
     except Exception as e:
-        # Log del error para debugging
         print(f"Error en index(): {str(e)}")
         import traceback
         traceback.print_exc()
-        
-        # Devolver página con error amigable
         return render_template("index.html", 
                              puntajes=PUNTAJES, 
                              rones=RONES, 
@@ -187,15 +277,10 @@ def resultados():
 @app.route("/reset")
 def reset():
     """Endpoint para limpiar todos los datos (solo para desarrollo)"""
-    global DATOS_MEMORIA
     try:
-        # Limpiar memoria
-        DATOS_MEMORIA = {}
-        
-        # Intentar eliminar archivo
-        if os.path.exists(DATA_FILE):
-            os.remove(DATA_FILE)
-        
+        with app.app_context():
+            db.drop_all()
+            db.create_all()
         return "Datos limpiados correctamente"
     except Exception as e:
         return f"Error al limpiar datos: {str(e)}"
@@ -206,9 +291,7 @@ def debug():
     try:
         datos = cargar_datos()
         return {
-            "archivo_existe": os.path.exists(DATA_FILE),
-            "datos_memoria": len(DATOS_MEMORIA),
-            "datos_archivo": len(datos),
+            "total_catas": Cata.query.count(),
             "datos": datos
         }
     except Exception as e:

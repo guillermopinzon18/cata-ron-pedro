@@ -67,11 +67,9 @@
                     </tbody>
                 </table>
             </div>
-            {% if total_count > 0 %}
             <div class="promedio-box" style="margin: 10px 0 20px 0; padding: 12px; background: #e3f2fd; border-radius: 8px; text-align: center; font-size: 1.2em; font-weight: bold; color: #1976D2;">
-                Promedio TOTAL: {{ (total_sum / total_count) | round(2) }}
+                Promedio TOTAL: {% if total_count > 0 %}{{ (total_sum / total_count) | round(2) }}{% else %}—{% endif %}
             </div>
-            {% endif %}
         </div>
         {% endfor %}
     </div>

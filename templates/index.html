@@ -225,15 +225,6 @@
             
             <div id="resultados-container">
                 {% for ron in rones %}
-                    {# Calcular total_sum y total_count antes de la tabla #}
-                    {% set total_sum = 0 %}
-                    {% set total_count = 0 %}
-                    {% for nombre_usuario, usuario_datos in datos.items() %}
-                        {% if ron in usuario_datos %}
-                            {% set total_sum = total_sum + usuario_datos[ron].total %}
-                            {% set total_count = total_count + 1 %}
-                        {% endif %}
-                    {% endfor %}
                     <div class="resultado-ron">
                         <h3>Muestra {{ loop.index }}</h3>
                         <div class="tabla-responsive">
@@ -289,7 +280,7 @@
                             </table>
                         </div>
                         <div class="promedio-box" style="margin: 10px 0 20px 0; padding: 12px; background: #e3f2fd; border-radius: 8px; text-align: center; font-size: 1.2em; font-weight: bold; color: #1976D2;">
-                            Promedio TOTAL: {% if total_count > 0 %}{{ (total_sum / total_count) | round(2) }}{% else %}—{% endif %}
+                            Promedio TOTAL: {{ promedios[ron] }}
                         </div>
                     </div>
                 {% endfor %}

@@ -159,12 +159,24 @@ def validar_numero(valor, default=0):
     except (ValueError, TypeError):
         return default
 
+def obtener_promedio_ron(tabla):
+    response = supabase.table(tabla).select('total').execute()
+    totales = [r['total'] for r in response.data if r.get('total') is not None]
+    if totales:
+        return round(sum(totales) / len(totales), 2)
+    return "—"
+
 @app.route("/", methods=["GET", "POST"])
 def index():
     try:
         print("Iniciando ruta index()")
         datos = cargar_datos()
         print(f"Datos cargados: {len(datos)} registros")
+        # Calcular promedios desde Supabase
+        promedios = {}
+        for ron in RONES:
+            tabla = f'catas_{ron.lower()}'
+            promedios[ron] = obtener_promedio_ron(tabla)
         
         # Obtener el paso actual de la URL o del formulario
         if request.method == "POST":
@@ -219,7 +231,8 @@ def index():
                                          paso_actual=paso_actual,
                                          datos=datos,
                                          nombre=nombre,
-                                         success=mensaje)
+                                         success=mensaje,
+                                         promedios=promedios)
                 except Exception as e:
                     print(f"Error durante el borrado: {str(e)}")
                     import traceback
@@ -230,7 +243,8 @@ def index():
                                          paso_actual=paso_actual,
                                          datos=datos,
                                          nombre=nombre,
-                                         error=f"Error al eliminar datos: {str(e)}")
+                                         error=f"Error al eliminar datos: {str(e)}",
+                                         promedios=promedios)
             
             # Si es pedroadmin, no procesar el formulario normal
             if nombre and nombre.lower() == "pedroadmin":
@@ -240,7 +254,8 @@ def index():
                                      rones=RONES, 
                                      paso_actual=paso_actual,
                                      datos=datos,
-                                     nombre=nombre)
+                                     nombre=nombre,
+                                     promedios=promedios)
             
             # Determinar el paso actual basado en la acción
             if accion == "siguiente":
@@ -261,7 +276,8 @@ def index():
                                      datos=datos,
                                      nombre=nombre,
                                      puntuaciones_previas=puntuaciones_previas,
-                                     solo_navegacion=True)
+                                     solo_navegacion=True,
+                                     promedios=promedios)
         else:
             # Si es GET, obtener el paso de la URL
             paso_actual = int(request.args.get('paso', 1))
@@ -285,7 +301,8 @@ def index():
                                      rones=RONES, 
                                      paso_actual=paso_actual,
                                      datos=datos,
-                                     error="Por favor ingresa tu nombre")
+                                     error="Por favor ingresa tu nombre",
+                                     promedios=promedios)
             
             # Obtener el ron actual basado en el paso
             ron_actual = RONES[paso_actual - 1]
@@ -348,7 +365,8 @@ def index():
                                          paso_actual=siguiente_paso,
                                          datos=datos,
                                          nombre=nombre,
-                                         success=f"Muestra {paso_actual} guardada correctamente")
+                                         success=f"Muestra {paso_actual} guardada correctamente",
+                                         promedios=promedios)
                 elif accion == "finalizar":
                     return render_template("index.html", 
                                          puntajes=PUNTAJES, 
@@ -356,7 +374,8 @@ def index():
                                          paso_actual=paso_actual,
                                          datos=datos,
                                          nombre=nombre,
-                                         success="¡Cata completada exitosamente! Gracias por participar.")
+                                         success="¡Cata completada exitosamente! Gracias por participar.",
+                                         promedios=promedios)
                 
             except Exception as e:
                 print(f"Error real al guardar: {e}")
@@ -366,7 +385,8 @@ def index():
                                      paso_actual=paso_actual,
                                      datos=datos,
                                      nombre=nombre,
-                                     error=f"Error al guardar: {e}")
+                                     error=f"Error al guardar: {e}",
+                                     promedios=promedios)
         
         # GET request o POST sin redirección
         return render_template("index.html", 
@@ -375,7 +395,8 @@ def index():
                              paso_actual=paso_actual,
                              datos=datos,
                              nombre=nombre,
-                             puntuaciones_previas=puntuaciones_previas)
+                             puntuaciones_previas=puntuaciones_previas,
+                             promedios=promedios)
                              
     except Exception as e:
         print(f"Error general en index(): {str(e)}")
@@ -387,7 +408,8 @@ def index():
                              paso_actual=1,
                              datos={},
                              nombre="",
-                             error=f"Error interno: {str(e)}")
+                             error=f"Error interno: {str(e)}",
+                             promedios={})
 
 @app.route("/resultados")
 def resultados():
@@ -429,6 +451,10 @@ def admin():
     error = None
     try:
         datos = cargar_datos()
+        promedios = {}
+        for ron in RONES:
+            tabla = f'catas_{ron.lower()}'
+            promedios[ron] = obtener_promedio_ron(tabla)
         if request.method == "POST":
             ron = request.form.get("ron_especifico")
             nombre_usuario = request.form.get("nombre_usuario")
@@ -438,11 +464,12 @@ def admin():
                     response = supabase.table(tabla).delete().eq('nombre', nombre_usuario).execute()
                     mensaje = f"Puntuación de {nombre_usuario} en la Muestra {ron} eliminada correctamente."
                     datos = cargar_datos()
+                    promedios[ron] = obtener_promedio_ron(tabla)
                 except Exception as e:
                     error = f"Error al borrar: {e}"
-        return render_template("admin.html", rones=RONES, datos=datos, mensaje=mensaje, error=error)
+        return render_template("admin.html", rones=RONES, datos=datos, mensaje=mensaje, error=error, promedios=promedios)
     except Exception as e:
-        return render_template("admin.html", rones=RONES, datos={}, mensaje=None, error=f"Error interno: {e}")
+        return render_template("admin.html", rones=RONES, datos={}, mensaje=None, error=f"Error interno: {e}", promedios={})
 
 if __name__ == "__main__":
     app.run(debug=True)

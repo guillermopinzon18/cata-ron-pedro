@@ -59,6 +59,8 @@ CREATE TABLE catas_d (
     pureza INTEGER NOT NULL,
     olfato_intensidad INTEGER NOT NULL,
     olfato_complejidad INTEGER NOT NULL,
+    gusto_intensidad INTEGER NOT NULL,
+    gusto_complejidad INTEGER NOT NULL,
     gusto_persistencia INTEGER NOT NULL,
     armonia INTEGER NOT NULL,
     total INTEGER NOT NULL,

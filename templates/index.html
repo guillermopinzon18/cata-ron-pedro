@@ -29,6 +29,9 @@
         <!-- Formulario principal -->
         <div class="form-section">
             <form method="POST">
+                <!-- Campo oculto para el paso actual -->
+                <input type="hidden" name="paso_actual" value="{{ paso_actual }}">
+                
                 <!-- Campo nombre -->
                 <div class="evaluador-info">
                     <label for="nombre">👤 Nombre y Apellido:</label>

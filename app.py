@@ -153,7 +153,20 @@ def validar_numero(valor, default=0):
 def index():
     try:
         datos = cargar_datos()
-        paso_actual = int(request.args.get('paso', 1))
+        
+        # Obtener el paso actual de la URL o del formulario
+        if request.method == "POST":
+            # Si es POST, obtener el paso del formulario
+            paso_actual = int(request.form.get('paso_actual', 1))
+            # Si se presionó "siguiente", avanzar al siguiente paso
+            if request.form.get('accion') == 'siguiente':
+                paso_actual += 1
+            # Si se presionó "anterior", retroceder un paso
+            elif request.form.get('accion') == 'anterior':
+                paso_actual -= 1
+        else:
+            # Si es GET, obtener el paso de la URL
+            paso_actual = int(request.args.get('paso', 1))
         
         # Validar que paso_actual esté en rango válido
         if paso_actual < 1:
@@ -173,6 +186,7 @@ def index():
             
             # Obtener el ron actual basado en el paso
             ron_actual = RONES[paso_actual - 1]
+            print(f"Procesando datos para paso {paso_actual}, ron {ron_actual}")
             
             # Crear o actualizar el documento del usuario
             puntuaciones = {
@@ -233,6 +247,7 @@ def index():
             # Determinar siguiente acción
             accion = request.form.get("accion", "")
             if accion == "siguiente" and paso_actual < len(RONES):
+                # Redirigir al siguiente paso
                 return render_template("index.html", 
                                      puntajes=PUNTAJES, 
                                      rones=RONES, 
@@ -241,6 +256,7 @@ def index():
                                      nombre=nombre,
                                      success=f"Muestra {paso_actual} guardada correctamente")
             elif accion == "anterior" and paso_actual > 1:
+                # Redirigir al paso anterior
                 return render_template("index.html", 
                                      puntajes=PUNTAJES, 
                                      rones=RONES, 

@@ -3,10 +3,12 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import os
 from dotenv import load_dotenv
-from sqlalchemy import event
+from sqlalchemy import event, create_engine
 from sqlalchemy.engine import Engine
 import sqlite3
 import urllib.parse
+import time
+from sqlalchemy.pool import QueuePool
 
 # Load environment variables
 load_dotenv()
@@ -15,53 +17,70 @@ app = Flask(__name__)
 app.secret_key = 'cata_ron_secret_key_2024'
 
 # PostgreSQL configuration with Supabase
-# Parse the connection URL to add SSL requirements
 DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://postgres:BRevIdsERoclrtgf@db.jpdizuizmhqmellbhniz.supabase.co:5432/postgres')
+
+# Parse the connection URL and add required parameters
 parsed = urllib.parse.urlparse(DATABASE_URL)
 # Add SSL mode and other required parameters
 DATABASE_URL = urllib.parse.urlunparse(parsed._replace(
     query=urllib.parse.urlencode({
         'sslmode': 'require',
-        'connect_timeout': '10',
-        'application_name': 'cata_ron_app'
+        'connect_timeout': '5',
+        'application_name': 'cata_ron_app',
+        'options': '-c statement_timeout=5000'
     })
 ))
 
+# Configure SQLAlchemy with serverless-optimized settings
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_size': 1,  # Vercel works better with a small pool
-    'max_overflow': 2,
-    'pool_timeout': 30,
-    'pool_recycle': 1800,
-    'pool_pre_ping': True,  # Verify connections before using them
+    'poolclass': QueuePool,
+    'pool_size': 1,  # Minimal pool size for serverless
+    'max_overflow': 0,  # No overflow connections
+    'pool_timeout': 5,  # Short timeout
+    'pool_recycle': 300,  # Recycle connections every 5 minutes
+    'pool_pre_ping': True,  # Verify connections before using
     'connect_args': {
-        'connect_timeout': 10,
+        'connect_timeout': 5,
         'keepalives': 1,
         'keepalives_idle': 30,
         'keepalives_interval': 10,
-        'keepalives_count': 5
+        'keepalives_count': 5,
+        'application_name': 'cata_ron_app'
     }
 }
 
-db = SQLAlchemy(app)
+# Create engine with retry logic
+def get_engine():
+    max_retries = 3
+    retry_delay = 1
+    
+    for attempt in range(max_retries):
+        try:
+            engine = create_engine(
+                app.config['SQLALCHEMY_DATABASE_URI'],
+                **app.config['SQLALCHEMY_ENGINE_OPTIONS']
+            )
+            # Test the connection
+            with engine.connect() as conn:
+                conn.execute("SELECT 1")
+            return engine
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise
+            print(f"Connection attempt {attempt + 1} failed: {e}")
+            time.sleep(retry_delay * (attempt + 1))
 
-# Configurar SQLite para mejor concurrencia
-@event.listens_for(Engine, "connect")
-def set_sqlite_pragma(dbapi_connection, connection_record):
-    if isinstance(dbapi_connection, sqlite3.Connection):
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA journal_mode=WAL")  # Write-Ahead Logging para mejor concurrencia
-        cursor.execute("PRAGMA synchronous=NORMAL")  # Balance entre seguridad y rendimiento
-        cursor.execute("PRAGMA busy_timeout=5000")  # Esperar hasta 5 segundos si la BD está bloqueada
-        cursor.close()
+# Initialize SQLAlchemy with our custom engine
+db = SQLAlchemy(app, engine_options=app.config['SQLALCHEMY_ENGINE_OPTIONS'])
 
-# Modelo para las catas
+# Model for catas
 class Cata(db.Model):
-    __tablename__ = 'catas'  # Explicitly name the table
+    __tablename__ = 'catas'
     
     id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(100), nullable=False, index=True)  # Índice para búsquedas más rápidas
+    nombre = db.Column(db.String(100), nullable=False, index=True)
     ron = db.Column(db.String(1), nullable=False, index=True)
     pureza = db.Column(db.Integer, default=0)
     olfato_intensidad = db.Column(db.Integer, default=0)
@@ -76,25 +95,29 @@ class Cata(db.Model):
 
     __table_args__ = (
         db.UniqueConstraint('nombre', 'ron', name='unique_cata_ron'),
-        db.Index('idx_nombre_ron', 'nombre', 'ron'),  # Índice compuesto para búsquedas más eficientes
+        db.Index('idx_nombre_ron', 'nombre', 'ron'),
     )
 
-# Crear las tablas solo si no existen
+# Initialize database with retry logic
 def init_db():
-    try:
-        with app.app_context():
-            # Verificar si la tabla existe
-            inspector = db.inspect(db.engine)
-            if 'catas' not in inspector.get_table_names():
+    max_retries = 3
+    retry_delay = 1
+    
+    for attempt in range(max_retries):
+        try:
+            with app.app_context():
+                # Create tables if they don't exist
                 db.create_all()
-                print("Tablas creadas exitosamente")
-            else:
-                print("Las tablas ya existen")
-    except Exception as e:
-        print(f"Error inicializando la base de datos: {e}")
-        raise
+                print("Database initialized successfully")
+                return
+        except Exception as e:
+            if attempt == max_retries - 1:
+                print(f"Failed to initialize database after {max_retries} attempts: {e}")
+                raise
+            print(f"Database initialization attempt {attempt + 1} failed: {e}")
+            time.sleep(retry_delay * (attempt + 1))
 
-# Inicializar la base de datos
+# Initialize the database
 init_db()
 
 # Puntuaciones fijas por criterio
@@ -187,7 +210,6 @@ def guardar_datos(datos):
                 print(f"Error guardando datos en PostgreSQL después de {max_intentos} intentos: {e}")
                 raise
             print(f"Intento {intento} fallido, reintentando...")
-            import time
             time.sleep(0.1 * intento)  # Esperar un poco más entre intentos
 
 def validar_numero(valor, default=0):

@@ -35,31 +35,35 @@ RONES = ["A", "B", "C", "D"]
 def cargar_datos():
     """Carga los datos desde Supabase"""
     try:
-        # Obtener todas las catas, ordenadas por timestamp descendente
-        response = supabase.table('catas').select('*').order('timestamp', desc=True).execute()
-        
-        # Convertir a diccionario, tomando solo la entrada más reciente para cada combinación nombre-ron
         datos = {}
-        for cata in response.data:
-            if cata['nombre'] not in datos:
-                datos[cata['nombre']] = {"nombre": cata['nombre']}
+        
+        # Cargar datos de cada tabla de ron
+        for ron in RONES:
+            tabla = f'catas_{ron.lower()}'
+            response = supabase.table(tabla).select('*').order('timestamp', desc=True).execute()
             
-            # Solo actualizar si no existe una entrada más reciente para este nombre-ron
-            if cata['ron'] not in datos[cata['nombre']]:
-                datos[cata['nombre']][cata['ron']] = {
-                    "pureza": cata['pureza'],
-                    "olfato_intensidad": cata['olfato_intensidad'],
-                    "olfato_complejidad": cata['olfato_complejidad'],
-                    "gusto_intensidad": cata['gusto_intensidad'],
-                    "gusto_complejidad": cata['gusto_complejidad'],
-                    "gusto_persistencia": cata['gusto_persistencia'],
-                    "armonia": cata['armonia'],
-                    "total": cata['total'],
-                    "timestamp": cata['timestamp']
-                }
+            for cata in response.data:
+                nombre = cata['nombre']
+                if nombre not in datos:
+                    datos[nombre] = {"nombre": nombre}
                 
-                if cata.get('notas'):
-                    datos[cata['nombre']]["notas"] = cata['notas']
+                # Solo actualizar si no existe una entrada más reciente para este nombre
+                if ron not in datos[nombre]:
+                    datos[nombre][ron] = {
+                        "pureza": cata['pureza'],
+                        "olfato_intensidad": cata['olfato_intensidad'],
+                        "olfato_complejidad": cata['olfato_complejidad'],
+                        "gusto_intensidad": cata['gusto_intensidad'],
+                        "gusto_complejidad": cata['gusto_complejidad'],
+                        "gusto_persistencia": cata['gusto_persistencia'],
+                        "armonia": cata['armonia'],
+                        "total": cata['total'],
+                        "timestamp": cata['timestamp']
+                    }
+                    
+                    # Solo guardar notas de la última tabla (Ron D)
+                    if ron == RONES[-1] and cata.get('notas'):
+                        datos[nombre]["notas"] = cata['notas']
         
         return datos
     except Exception as e:
@@ -90,7 +94,6 @@ def guardar_datos(datos):
                 # Preparar datos para insertar
                 cata_data = {
                     "nombre": nombre,
-                    "ron": ron_actual,
                     "pureza": puntuaciones.get("pureza", 0),
                     "olfato_intensidad": puntuaciones.get("olfato_intensidad", 0),
                     "olfato_complejidad": puntuaciones.get("olfato_complejidad", 0),
@@ -102,19 +105,22 @@ def guardar_datos(datos):
                     "timestamp": datetime.utcnow().isoformat()
                 }
                 
+                # Agregar notas solo para el último ron
                 if "notas" in datos_usuario and ron_actual == RONES[-1]:
                     cata_data["notas"] = datos_usuario["notas"]
                 
-                print(f"Intentando guardar datos para {nombre}, ron {ron_actual}: {cata_data}")
+                # Determinar la tabla correcta basada en el ron
+                tabla = f'catas_{ron_actual.lower()}'
+                print(f"Intentando guardar datos para {nombre} en tabla {tabla}: {cata_data}")
                 
-                # Insertar nuevo registro
-                response = supabase.table('catas').insert(cata_data).execute()
+                # Insertar nuevo registro en la tabla correspondiente
+                response = supabase.table(tabla).insert(cata_data).execute()
                 
                 if not response.data:
                     print(f"Respuesta de Supabase al guardar: {response}")
-                    raise Exception(f"No se pudo guardar los datos para {nombre}, ron {ron_actual}")
+                    raise Exception(f"No se pudo guardar los datos para {nombre} en tabla {tabla}")
                 
-                print(f"Datos guardados exitosamente para {nombre}, ron {ron_actual}")
+                print(f"Datos guardados exitosamente para {nombre} en tabla {tabla}")
             
             return  # Éxito, salir del bucle
                 
@@ -271,8 +277,10 @@ def resultados():
 def reset():
     """Endpoint para limpiar todos los datos (solo para desarrollo)"""
     try:
-        # Eliminar todos los registros de la tabla catas
-        response = supabase.table('catas').delete().neq('id', 0).execute()
+        # Eliminar todos los registros de todas las tablas
+        for ron in RONES:
+            tabla = f'catas_{ron.lower()}'
+            response = supabase.table(tabla).delete().neq('id', 0).execute()
         return "Datos limpiados correctamente"
     except Exception as e:
         return f"Error al limpiar datos: {str(e)}"

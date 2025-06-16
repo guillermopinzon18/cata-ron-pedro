@@ -249,16 +249,27 @@ def index():
             elif accion == "anterior":
                 paso_actual = max(1, paso_actual - 1)
                 # Si es "anterior", permitir navegación sin validar campos
+                # Cargar los datos previos del usuario si existen
+                puntuaciones_previas = {}
+                if nombre in datos and RONES[paso_actual-1] in datos[nombre]:
+                    puntuaciones_previas = datos[nombre][RONES[paso_actual-1]]
+                
                 return render_template("index.html", 
                                      puntajes=PUNTAJES, 
                                      rones=RONES, 
                                      paso_actual=paso_actual,
                                      datos=datos,
-                                     nombre=nombre)
+                                     nombre=nombre,
+                                     puntuaciones_previas=puntuaciones_previas)
         else:
             # Si es GET, obtener el paso de la URL
             paso_actual = int(request.args.get('paso', 1))
             nombre = request.args.get('nombre', '')
+            
+            # Si hay nombre, cargar puntuaciones previas si existen
+            puntuaciones_previas = {}
+            if nombre and nombre in datos and RONES[paso_actual-1] in datos[nombre]:
+                puntuaciones_previas = datos[nombre][RONES[paso_actual-1]]
         
         # Validar que paso_actual esté en rango válido
         if paso_actual < 1:
@@ -266,7 +277,7 @@ def index():
         elif paso_actual > len(RONES):
             paso_actual = len(RONES)
     
-        if request.method == "POST" and accion != "anterior":  # Solo validar campos si no es "anterior"
+        if request.method == "POST" and accion not in ["anterior"]:  # Solo validar campos si no es "anterior"
             if not nombre:
                 return render_template("index.html", 
                                      puntajes=PUNTAJES, 
@@ -362,7 +373,8 @@ def index():
                              rones=RONES, 
                              paso_actual=paso_actual,
                              datos=datos,
-                             nombre=nombre)
+                             nombre=nombre,
+                             puntuaciones_previas=puntuaciones_previas)
                              
     except Exception as e:
         print(f"Error general en index(): {str(e)}")

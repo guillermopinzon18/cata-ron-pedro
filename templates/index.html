@@ -93,7 +93,7 @@
                                         <select name="pureza" required>
                                             <option value="">Seleccionar</option>
                                             {% for val in puntajes.pureza %}
-                                                <option value="{{ val }}">{{ val }}</option>
+                                                <option value="{{ val }}" {% if puntuaciones_previas and puntuaciones_previas.pureza == val %}selected{% endif %}>{{ val }}</option>
                                             {% endfor %}
                                         </select>
                                     </td>
@@ -107,7 +107,7 @@
                                         <select name="olfato_intensidad" required>
                                             <option value="">Seleccionar</option>
                                             {% for val in puntajes.olfato_intensidad %}
-                                                <option value="{{ val }}">{{ val }}</option>
+                                                <option value="{{ val }}" {% if puntuaciones_previas and puntuaciones_previas.olfato_intensidad == val %}selected{% endif %}>{{ val }}</option>
                                             {% endfor %}
                                         </select>
                                     </td>
@@ -119,7 +119,7 @@
                                         <select name="olfato_complejidad" required>
                                             <option value="">Seleccionar</option>
                                             {% for val in puntajes.olfato_complejidad %}
-                                                <option value="{{ val }}">{{ val }}</option>
+                                                <option value="{{ val }}" {% if puntuaciones_previas and puntuaciones_previas.olfato_complejidad == val %}selected{% endif %}>{{ val }}</option>
                                             {% endfor %}
                                         </select>
                                     </td>
@@ -133,7 +133,7 @@
                                         <select name="gusto_intensidad" required>
                                             <option value="">Seleccionar</option>
                                             {% for val in puntajes.gusto_intensidad %}
-                                                <option value="{{ val }}">{{ val }}</option>
+                                                <option value="{{ val }}" {% if puntuaciones_previas and puntuaciones_previas.gusto_intensidad == val %}selected{% endif %}>{{ val }}</option>
                                             {% endfor %}
                                         </select>
                                     </td>
@@ -145,7 +145,7 @@
                                         <select name="gusto_complejidad" required>
                                             <option value="">Seleccionar</option>
                                             {% for val in puntajes.gusto_complejidad %}
-                                                <option value="{{ val }}">{{ val }}</option>
+                                                <option value="{{ val }}" {% if puntuaciones_previas and puntuaciones_previas.gusto_complejidad == val %}selected{% endif %}>{{ val }}</option>
                                             {% endfor %}
                                         </select>
                                     </td>
@@ -157,7 +157,7 @@
                                         <select name="gusto_persistencia" required>
                                             <option value="">Seleccionar</option>
                                             {% for val in puntajes.gusto_persistencia %}
-                                                <option value="{{ val }}">{{ val }}</option>
+                                                <option value="{{ val }}" {% if puntuaciones_previas and puntuaciones_previas.gusto_persistencia == val %}selected{% endif %}>{{ val }}</option>
                                             {% endfor %}
                                         </select>
                                     </td>
@@ -171,7 +171,7 @@
                                         <select name="armonia" required>
                                             <option value="">Seleccionar</option>
                                             {% for val in puntajes.armonia %}
-                                                <option value="{{ val }}">{{ val }}</option>
+                                                <option value="{{ val }}" {% if puntuaciones_previas and puntuaciones_previas.armonia == val %}selected{% endif %}>{{ val }}</option>
                                             {% endfor %}
                                         </select>
                                     </td>

@@ -78,7 +78,7 @@ def guardar_datos(datos):
     while intento < max_intentos:
         try:
             for nombre, datos_usuario in datos.items():
-                # Obtener el ron actual basado en los datos del usuario
+                # Verificar que tenemos datos para el ron actual
                 ron_actual = None
                 for ron in RONES:
                     if ron in datos_usuario and isinstance(datos_usuario[ron], dict):
@@ -89,7 +89,11 @@ def guardar_datos(datos):
                     print(f"No se encontró ron para guardar en los datos de {nombre}")
                     continue
                 
+                # Obtener las puntuaciones del ron actual
                 puntuaciones = datos_usuario[ron_actual]
+                if not puntuaciones:
+                    print(f"No hay puntuaciones para {nombre}, ron {ron_actual}")
+                    continue
                 
                 # Preparar datos para insertar
                 cata_data = {
@@ -113,14 +117,18 @@ def guardar_datos(datos):
                 tabla = f'catas_{ron_actual.lower()}'
                 print(f"Intentando guardar datos para {nombre} en tabla {tabla}: {cata_data}")
                 
-                # Insertar nuevo registro en la tabla correspondiente
-                response = supabase.table(tabla).insert(cata_data).execute()
-                
-                if not response.data:
-                    print(f"Respuesta de Supabase al guardar: {response}")
-                    raise Exception(f"No se pudo guardar los datos para {nombre} en tabla {tabla}")
-                
-                print(f"Datos guardados exitosamente para {nombre} en tabla {tabla}")
+                try:
+                    # Insertar nuevo registro en la tabla correspondiente
+                    response = supabase.table(tabla).insert(cata_data).execute()
+                    
+                    if not response.data:
+                        print(f"Respuesta de Supabase al guardar en {tabla}: {response}")
+                        raise Exception(f"No se pudo guardar los datos para {nombre} en tabla {tabla}")
+                    
+                    print(f"Datos guardados exitosamente para {nombre} en tabla {tabla}")
+                except Exception as e:
+                    print(f"Error específico al guardar en tabla {tabla}: {e}")
+                    raise
             
             return  # Éxito, salir del bucle
                 
@@ -196,18 +204,22 @@ def index():
                 datos[nombre]["notas"] = request.form.get("notas", "")
             
             try:
-                # Guardar solo los datos del ron actual
+                # Preparar datos para guardar solo el ron actual
                 datos_a_guardar = {
                     nombre: {
                         "nombre": nombre,
                         ron_actual: puntuaciones
                     }
                 }
+                
+                # Agregar notas solo si es el último paso
                 if paso_actual == len(RONES):
                     datos_a_guardar[nombre]["notas"] = request.form.get("notas", "")
                 
+                print(f"Intentando guardar datos para paso {paso_actual}, ron {ron_actual}")
                 guardar_datos(datos_a_guardar)
                 print(f"Datos guardados exitosamente para {nombre}, ron {ron_actual}")
+                
             except Exception as e:
                 print(f"Error real al guardar: {e}")
                 return render_template("index.html", 

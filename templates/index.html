@@ -279,8 +279,11 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div class="promedio-box" style="margin: 10px 0 20px 0; padding: 12px; background: #e3f2fd; border-radius: 8px; text-align: center; font-size: 1.2em; font-weight: bold; color: #1976D2;">
-                            Promedio TOTAL: {{ promedios[ron] }}
+                        <div style="display: flex; justify-content: center; gap: 10px; align-items: center; margin-top: 10px;">
+                            <button class="btn-refresh" onclick="sacarPromedio('{{ ron }}', this)">Sacar Promedio</button>
+                            <div id="promedio-{{ ron }}" class="promedio-box" style="padding: 12px; background: #e3f2fd; border-radius: 8px; text-align: center; font-size: 1.2em; font-weight: bold; color: #1976D2;">
+                                Promedio TOTAL: <span>{{ promedios[ron] }}</span>
+                            </div>
                         </div>
                     </div>
                 {% endfor %}
@@ -306,13 +309,6 @@
                     console.error('Error al actualizar resultados:', error);
                 });
         }
-        
-        // Auto-refrescar la página cada 30 segundos para ver nuevos resultados
-        setTimeout(() => {
-            if (!document.querySelector('form').checkValidity()) {
-                window.location.reload();
-            }
-        }, 30000);
         
         // Prevenir pérdida de datos al navegar
         window.addEventListener('beforeunload', function(e) {
@@ -342,6 +338,17 @@
             form.appendChild(input);
             form.noValidate = true;
             form.submit();
+        }
+
+        function sacarPromedio(ron, btn) {
+            fetch(`/promedio/${ron}`)
+                .then(res => res.json())
+                .then(data => {
+                    const box = document.getElementById(`promedio-${ron}`);
+                    if (box && data.promedio !== undefined) {
+                        box.innerHTML = 'Promedio TOTAL: <span>' + data.promedio + '</span>';
+                    }
+                });
         }
     </script>
 </body>

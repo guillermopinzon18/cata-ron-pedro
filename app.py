@@ -471,6 +471,14 @@ def admin():
     except Exception as e:
         return render_template("admin.html", rones=RONES, datos={}, mensaje=None, error=f"Error interno: {e}", promedios={})
 
+@app.route('/promedio/<ron>')
+def promedio_ron(ron):
+    if ron.upper() not in RONES:
+        return {'error': 'Muestra no válida'}, 400
+    tabla = f'catas_{ron.lower()}'
+    promedio = obtener_promedio_ron(tabla)
+    return {'promedio': promedio}
+
 if __name__ == "__main__":
     app.run(debug=True)
 

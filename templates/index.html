@@ -225,6 +225,15 @@
             
             <div id="resultados-container">
                 {% for ron in rones %}
+                    {# Calcular total_sum y total_count antes de la tabla #}
+                    {% set total_sum = 0 %}
+                    {% set total_count = 0 %}
+                    {% for nombre_usuario, usuario_datos in datos.items() %}
+                        {% if ron in usuario_datos %}
+                            {% set total_sum = total_sum + usuario_datos[ron].total %}
+                            {% set total_count = total_count + 1 %}
+                        {% endif %}
+                    {% endfor %}
                     <div class="resultado-ron">
                         <h3>Muestra {{ loop.index }}</h3>
                         <div class="tabla-responsive">
@@ -246,8 +255,6 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% set total_sum = 0 %}
-                                    {% set total_count = 0 %}
                                     {% for nombre_usuario, usuario_datos in datos.items() %}
                                         {% if ron in usuario_datos %}
                                         <tr>
@@ -260,8 +267,6 @@
                                             <td>{{ usuario_datos[ron].gusto_persistencia }}</td>
                                             <td>{{ usuario_datos[ron].armonia }}</td>
                                             <td class="total-cell">{{ usuario_datos[ron].total }}</td>
-                                            {% set total_sum = total_sum + usuario_datos[ron].total %}
-                                            {% set total_count = total_count + 1 %}
                                             {% if nombre and nombre.lower() == 'pedroadmin' %}
                                             <td>
                                                 <form method="POST" style="display: inline;">

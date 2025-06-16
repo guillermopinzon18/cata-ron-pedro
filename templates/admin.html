@@ -18,59 +18,63 @@
             <div class="alert error">{{ error }}</div>
         {% endif %}
         {% for ron in rones %}
-        {% set muestra_idx = loop.index %}
-        <div class="resultado-ron">
-            <h3>Muestra {{ muestra_idx }}</h3>
-            <div class="tabla-responsive">
-                <table class="resultados-tabla">
-                    <thead>
-                        <tr>
-                            <th>Participante</th>
-                            <th>Pureza</th>
-                            <th>Olfato Int.</th>
-                            <th>Olfato Comp.</th>
-                            <th>Gusto Int.</th>
-                            <th>Gusto Comp.</th>
-                            <th>Persistencia</th>
-                            <th>Armonía</th>
-                            <th>TOTAL</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% set total_sum = 0 %}
-                        {% set total_count = 0 %}
-                        {% for nombre_usuario, usuario_datos in datos.items() %}
-                            {% if ron in usuario_datos %}
+            {% set total_sum = 0 %}
+            {% set total_count = 0 %}
+            {% for nombre_usuario, usuario_datos in datos.items() %}
+                {% if ron in usuario_datos %}
+                    {% set total_sum = total_sum + usuario_datos[ron].total %}
+                    {% set total_count = total_count + 1 %}
+                {% endif %}
+            {% endfor %}
+            {% set muestra_idx = loop.index %}
+            <div class="resultado-ron">
+                <h3>Muestra {{ muestra_idx }}</h3>
+                <div class="tabla-responsive">
+                    <table class="resultados-tabla">
+                        <thead>
                             <tr>
-                                <td class="nombre-participante">{{ nombre_usuario }}</td>
-                                <td>{{ usuario_datos[ron].pureza }}</td>
-                                <td>{{ usuario_datos[ron].olfato_intensidad }}</td>
-                                <td>{{ usuario_datos[ron].olfato_complejidad }}</td>
-                                <td>{{ usuario_datos[ron].gusto_intensidad }}</td>
-                                <td>{{ usuario_datos[ron].gusto_complejidad }}</td>
-                                <td>{{ usuario_datos[ron].gusto_persistencia }}</td>
-                                <td>{{ usuario_datos[ron].armonia }}</td>
-                                <td class="total-cell">{{ usuario_datos[ron].total }}</td>
-                                {% set total_sum = total_sum + usuario_datos[ron].total %}
-                                {% set total_count = total_count + 1 %}
-                                <td>
-                                    <form method="POST" style="display: inline;">
-                                        <input type="hidden" name="ron_especifico" value="{{ ron }}">
-                                        <input type="hidden" name="nombre_usuario" value="{{ nombre_usuario }}">
-                                        <button type="submit" class="btn-refresh" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;" onclick="return confirm('¿Eliminar puntuación de {{ nombre_usuario }} en Muestra {{ muestra_idx }}?')">🗑️</button>
-                                    </form>
-                                </td>
+                                <th>Participante</th>
+                                <th>Pureza</th>
+                                <th>Olfato Int.</th>
+                                <th>Olfato Comp.</th>
+                                <th>Gusto Int.</th>
+                                <th>Gusto Comp.</th>
+                                <th>Persistencia</th>
+                                <th>Armonía</th>
+                                <th>TOTAL</th>
+                                <th>Acciones</th>
                             </tr>
-                            {% endif %}
-                        {% endfor %}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {% for nombre_usuario, usuario_datos in datos.items() %}
+                                {% if ron in usuario_datos %}
+                                <tr>
+                                    <td class="nombre-participante">{{ nombre_usuario }}</td>
+                                    <td>{{ usuario_datos[ron].pureza }}</td>
+                                    <td>{{ usuario_datos[ron].olfato_intensidad }}</td>
+                                    <td>{{ usuario_datos[ron].olfato_complejidad }}</td>
+                                    <td>{{ usuario_datos[ron].gusto_intensidad }}</td>
+                                    <td>{{ usuario_datos[ron].gusto_complejidad }}</td>
+                                    <td>{{ usuario_datos[ron].gusto_persistencia }}</td>
+                                    <td>{{ usuario_datos[ron].armonia }}</td>
+                                    <td class="total-cell">{{ usuario_datos[ron].total }}</td>
+                                    <td>
+                                        <form method="POST" style="display: inline;">
+                                            <input type="hidden" name="ron_especifico" value="{{ ron }}">
+                                            <input type="hidden" name="nombre_usuario" value="{{ nombre_usuario }}">
+                                            <button type="submit" class="btn-refresh" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;" onclick="return confirm('¿Eliminar puntuación de {{ nombre_usuario }} en Muestra {{ muestra_idx }}?')">🗑️</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="promedio-box" style="margin: 10px 0 20px 0; padding: 12px; background: #e3f2fd; border-radius: 8px; text-align: center; font-size: 1.2em; font-weight: bold; color: #1976D2;">
+                    Promedio TOTAL: {% if total_count > 0 %}{{ (total_sum / total_count) | round(2) }}{% else %}—{% endif %}
+                </div>
             </div>
-            <div class="promedio-box" style="margin: 10px 0 20px 0; padding: 12px; background: #e3f2fd; border-radius: 8px; text-align: center; font-size: 1.2em; font-weight: bold; color: #1976D2;">
-                Promedio TOTAL: {% if total_count > 0 %}{{ (total_sum / total_count) | round(2) }}{% else %}—{% endif %}
-            </div>
-        </div>
         {% endfor %}
     </div>
 </body>

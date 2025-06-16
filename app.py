@@ -160,8 +160,13 @@ def validar_numero(valor, default=0):
         return default
 
 def obtener_promedio_ron(tabla):
-    response = supabase.table(tabla).select('total').execute()
-    totales = [r['total'] for r in response.data if r.get('total') is not None]
+    response = supabase.table(tabla).select('nombre', 'total', 'timestamp').order('timestamp', desc=True).execute()
+    ultimos = {}
+    for r in response.data:
+        nombre = r['nombre']
+        if nombre not in ultimos and r.get('total') is not None:
+            ultimos[nombre] = r['total']
+    totales = list(ultimos.values())
     if totales:
         return round(sum(totales) / len(totales), 2)
     return "—"

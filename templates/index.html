@@ -72,7 +72,7 @@
                 <!-- Ron actual -->
                 {% set ron_actual = rones[paso_actual-1] %}
                 <div class="ron-box">
-                    <h2>🍯 Evaluando Muestra {{ paso_actual }}</h2>
+                    <h2> Evaluando Muestra {{ paso_actual }}</h2>
                     <div class="scroll-table">
                         <table>
                             <thead>
@@ -193,7 +193,7 @@
                 <!-- Botones de navegación -->
                 <div class="navigation-buttons">
                     {% if paso_actual > 1 %}
-                        <button type="submit" name="accion" value="anterior" class="btn-secondary">
+                        <button type="button" class="btn-secondary" onclick="irAnterior()">
                             ← Anterior
                         </button>
                     {% endif %}
@@ -255,6 +255,8 @@
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    {% set total_sum = 0 %}
+                                    {% set total_count = 0 %}
                                     {% for nombre_usuario, usuario_datos in datos.items() %}
                                         {% if ron in usuario_datos %}
                                         <tr>
@@ -267,6 +269,8 @@
                                             <td>{{ usuario_datos[ron].gusto_persistencia }}</td>
                                             <td>{{ usuario_datos[ron].armonia }}</td>
                                             <td class="total-cell">{{ usuario_datos[ron].total }}</td>
+                                            {% set total_sum = total_sum + usuario_datos[ron].total %}
+                                            {% set total_count = total_count + 1 %}
                                             {% if nombre and nombre.lower() == 'pedroadmin' %}
                                             <td>
                                                 <form method="POST" style="display: inline;">
@@ -285,6 +289,13 @@
                                         </tr>
                                         {% endif %}
                                     {% endfor %}
+                                    {% if total_count > 0 %}
+                                    <tr>
+                                        <td colspan="8" style="text-align:right;"><b>Promedio TOTAL:</b></td>
+                                        <td class="total-cell"><b>{{ (total_sum / total_count) | round(2) }}</b></td>
+                                        {% if nombre and nombre.lower() == 'pedroadmin' %}<td></td>{% endif %}
+                                    </tr>
+                                    {% endif %}
                                 </tbody>
                             </table>
                         </div>
@@ -338,6 +349,17 @@
                 e.returnValue = '¿Estás seguro de salir? Perderás los datos no guardados.';
             }
         });
+
+        function irAnterior() {
+            const form = document.querySelector('form');
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'accion';
+            input.value = 'anterior';
+            form.appendChild(input);
+            form.noValidate = true;
+            form.submit();
+        }
     </script>
 </body>
 </html> 

@@ -423,6 +423,27 @@ def debug():
     except Exception as e:
         return {"error": str(e)}
 
+@app.route("/admin", methods=["GET", "POST"])
+def admin():
+    mensaje = None
+    error = None
+    try:
+        datos = cargar_datos()
+        if request.method == "POST":
+            ron = request.form.get("ron_especifico")
+            nombre_usuario = request.form.get("nombre_usuario")
+            if ron and nombre_usuario:
+                tabla = f'catas_{ron.lower()}'
+                try:
+                    response = supabase.table(tabla).delete().eq('nombre', nombre_usuario).execute()
+                    mensaje = f"Puntuación de {nombre_usuario} en la Muestra {ron} eliminada correctamente."
+                    datos = cargar_datos()
+                except Exception as e:
+                    error = f"Error al borrar: {e}"
+        return render_template("admin.html", rones=RONES, datos=datos, mensaje=mensaje, error=error)
+    except Exception as e:
+        return render_template("admin.html", rones=RONES, datos={}, mensaje=None, error=f"Error interno: {e}")
+
 if __name__ == "__main__":
     app.run(debug=True)
 

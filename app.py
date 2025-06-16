@@ -93,6 +93,9 @@ def index():
             # Obtener el ron actual basado en el paso
             ron_actual = RONES[paso_actual - 1]
             
+            print(f"DEBUG: Guardando datos para {nombre} - Ron {ron_actual}")
+            print(f"DEBUG: Datos actuales: {json.dumps(datos[nombre], indent=2)}")
+            
             # Guardar las puntuaciones del ron actual con validación
             datos[nombre][ron_actual] = {
                 "pureza": validar_numero(request.form.get("pureza")),
@@ -117,6 +120,8 @@ def index():
             
             # Guardar datos
             guardar_datos(datos)
+            
+            print(f"DEBUG: Datos después de guardar: {json.dumps(datos[nombre], indent=2)}")
             
             # Determinar siguiente acción
             accion = request.form.get("accion", "")

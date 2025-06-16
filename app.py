@@ -158,12 +158,14 @@ def index():
         if request.method == "POST":
             # Si es POST, obtener el paso del formulario
             paso_actual = int(request.form.get('paso_actual', 1))
-            # Si se presionó "siguiente", avanzar al siguiente paso
-            if request.form.get('accion') == 'siguiente':
-                paso_actual += 1
-            # Si se presionó "anterior", retroceder un paso
-            elif request.form.get('accion') == 'anterior':
-                paso_actual -= 1
+            accion = request.form.get("accion", "")
+            
+            # Determinar el paso actual basado en la acción
+            if accion == "siguiente":
+                # No incrementamos aquí, lo haremos después de guardar
+                pass
+            elif accion == "anterior":
+                paso_actual = max(1, paso_actual - 1)
         else:
             # Si es GET, obtener el paso de la URL
             paso_actual = int(request.args.get('paso', 1))
@@ -234,6 +236,34 @@ def index():
                 guardar_datos(datos_a_guardar)
                 print(f"Datos guardados exitosamente para {nombre}, ron {ron_actual}")
                 
+                # Determinar siguiente acción después de guardar exitosamente
+                accion = request.form.get("accion", "")
+                if accion == "siguiente" and paso_actual < len(RONES):
+                    # Incrementar el paso solo después de guardar exitosamente
+                    siguiente_paso = paso_actual + 1
+                    return render_template("index.html", 
+                                         puntajes=PUNTAJES, 
+                                         rones=RONES, 
+                                         paso_actual=siguiente_paso,
+                                         datos=datos,
+                                         nombre=nombre,
+                                         success=f"Muestra {paso_actual} guardada correctamente")
+                elif accion == "anterior" and paso_actual > 1:
+                    return render_template("index.html", 
+                                         puntajes=PUNTAJES, 
+                                         rones=RONES, 
+                                         paso_actual=paso_actual - 1,
+                                         datos=datos,
+                                         nombre=nombre)
+                elif accion == "finalizar":
+                    return render_template("index.html", 
+                                         puntajes=PUNTAJES, 
+                                         rones=RONES, 
+                                         paso_actual=paso_actual,
+                                         datos=datos,
+                                         nombre=nombre,
+                                         success="¡Cata completada exitosamente! Gracias por participar.")
+                
             except Exception as e:
                 print(f"Error real al guardar: {e}")
                 return render_template("index.html", 
@@ -243,34 +273,6 @@ def index():
                                      datos=datos,
                                      nombre=nombre,
                                      error=f"Error al guardar: {e}")
-            
-            # Determinar siguiente acción
-            accion = request.form.get("accion", "")
-            if accion == "siguiente" and paso_actual < len(RONES):
-                # Redirigir al siguiente paso
-                return render_template("index.html", 
-                                     puntajes=PUNTAJES, 
-                                     rones=RONES, 
-                                     paso_actual=paso_actual + 1,
-                                     datos=datos,
-                                     nombre=nombre,
-                                     success=f"Muestra {paso_actual} guardada correctamente")
-            elif accion == "anterior" and paso_actual > 1:
-                # Redirigir al paso anterior
-                return render_template("index.html", 
-                                     puntajes=PUNTAJES, 
-                                     rones=RONES, 
-                                     paso_actual=paso_actual - 1,
-                                     datos=datos,
-                                     nombre=nombre)
-            elif accion == "finalizar":
-                return render_template("index.html", 
-                                     puntajes=PUNTAJES, 
-                                     rones=RONES, 
-                                     paso_actual=paso_actual,
-                                     datos=datos,
-                                     nombre=nombre,
-                                     success="¡Cata completada exitosamente! Gracias por participar.")
         
         # GET request o POST sin redirección
         return render_template("index.html", 

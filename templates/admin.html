@@ -64,16 +64,14 @@
                             </tr>
                             {% endif %}
                         {% endfor %}
-                        {% if total_count > 0 %}
-                        <tr>
-                            <td colspan="8" style="text-align:right;"><b>Promedio TOTAL:</b></td>
-                            <td class="total-cell"><b>{{ (total_sum / total_count) | round(2) }}</b></td>
-                            <td></td>
-                        </tr>
-                        {% endif %}
                     </tbody>
                 </table>
             </div>
+            {% if total_count > 0 %}
+            <div class="promedio-box" style="margin: 10px 0 20px 0; padding: 12px; background: #e3f2fd; border-radius: 8px; text-align: center; font-size: 1.2em; font-weight: bold; color: #1976D2;">
+                Promedio TOTAL: {{ (total_sum / total_count) | round(2) }}
+            </div>
+            {% endif %}
         </div>
         {% endfor %}
     </div>

@@ -219,6 +219,17 @@
             <div class="refresh-info">
                 <small>Se actualiza automáticamente cada 10 segundos</small>
                 <button onclick="actualizarResultados()" class="btn-refresh">🔄 Actualizar</button>
+                {% if nombre and nombre.lower() == 'pedroadmin' %}
+                <form method="POST" style="display: inline;">
+                    <input type="hidden" name="nombre" value="{{ nombre }}">
+                    <input type="hidden" name="paso_actual" value="{{ paso_actual }}">
+                    <button type="submit" name="accion" value="borrar_todo" class="btn-refresh" 
+                            onclick="return confirm('¿Estás seguro de que deseas eliminar TODOS los datos?')"
+                            style="background: #dc3545; margin-left: 10px;">
+                        🗑️ Borrar Todos los Datos
+                    </button>
+                </form>
+                {% endif %}
             </div>
             
             <div id="resultados-container">
@@ -238,13 +249,16 @@
                                         <th>Persistencia</th>
                                         <th>Armonía</th>
                                         <th>TOTAL</th>
+                                        {% if nombre and nombre.lower() == 'pedroadmin' %}
+                                        <th>Acciones</th>
+                                        {% endif %}
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for nombre, usuario_datos in datos.items() %}
+                                    {% for nombre_usuario, usuario_datos in datos.items() %}
                                         {% if ron in usuario_datos %}
                                         <tr>
-                                            <td class="nombre-participante">{{ nombre }}</td>
+                                            <td class="nombre-participante">{{ nombre_usuario }}</td>
                                             <td>{{ usuario_datos[ron].pureza }}</td>
                                             <td>{{ usuario_datos[ron].olfato_intensidad }}</td>
                                             <td>{{ usuario_datos[ron].olfato_complejidad }}</td>
@@ -253,6 +267,21 @@
                                             <td>{{ usuario_datos[ron].gusto_persistencia }}</td>
                                             <td>{{ usuario_datos[ron].armonia }}</td>
                                             <td class="total-cell">{{ usuario_datos[ron].total }}</td>
+                                            {% if nombre and nombre.lower() == 'pedroadmin' %}
+                                            <td>
+                                                <form method="POST" style="display: inline;">
+                                                    <input type="hidden" name="nombre" value="{{ nombre }}">
+                                                    <input type="hidden" name="paso_actual" value="{{ paso_actual }}">
+                                                    <input type="hidden" name="ron_especifico" value="{{ ron }}">
+                                                    <input type="hidden" name="nombre_usuario" value="{{ nombre_usuario }}">
+                                                    <button type="submit" name="accion" value="borrar_registro" 
+                                                            onclick="return confirm('¿Estás seguro de que deseas eliminar la puntuación de {{ nombre_usuario }} en la Muestra {{ loop.index }}?')"
+                                                            style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                                                        🗑️
+                                                    </button>
+                                                </form>
+                                            </td>
+                                            {% endif %}
                                         </tr>
                                         {% endif %}
                                     {% endfor %}

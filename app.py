@@ -193,19 +193,21 @@ def index():
                             response = supabase.table(tabla).delete().neq('id', 0).execute()
                             print(f"Respuesta de borrado {tabla}: {response}")
                         mensaje = "Todos los datos han sido eliminados correctamente"
-                    elif accion == "borrar_ron":
-                        print("Iniciando borrado de ron específico")
-                        # Eliminar registros de una tabla específica
+                    elif accion == "borrar_registro":
+                        print("Iniciando borrado de registro específico")
+                        # Eliminar un registro específico
                         ron_especifico = request.form.get("ron_especifico")
-                        print(f"Ron específico a borrar: {ron_especifico}")
-                        if ron_especifico in RONES:
+                        nombre_usuario = request.form.get("nombre_usuario")
+                        print(f"Borrando registro de {nombre_usuario} en ron {ron_especifico}")
+                        
+                        if ron_especifico in RONES and nombre_usuario:
                             tabla = f'catas_{ron_especifico.lower()}'
-                            print(f"Borrando tabla {tabla}")
-                            response = supabase.table(tabla).delete().neq('id', 0).execute()
-                            print(f"Respuesta de borrado {tabla}: {response}")
-                            mensaje = f"Datos de la Muestra {RONES.index(ron_especifico) + 1} eliminados correctamente"
+                            print(f"Borrando de tabla {tabla}")
+                            response = supabase.table(tabla).delete().eq('nombre', nombre_usuario).execute()
+                            print(f"Respuesta de borrado: {response}")
+                            mensaje = f"Puntuación de {nombre_usuario} en la Muestra {RONES.index(ron_especifico) + 1} eliminada correctamente"
                         else:
-                            raise Exception(f"Muestra no válida: {ron_especifico}")
+                            raise Exception("Datos de borrado inválidos")
                     
                     # Recargar datos después de borrar
                     print("Recargando datos después del borrado")

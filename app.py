@@ -72,40 +72,53 @@ def guardar_datos(datos):
     while intento < max_intentos:
         try:
             for nombre, datos_usuario in datos.items():
+                # Obtener el ron actual basado en los datos del usuario
+                ron_actual = None
                 for ron in RONES:
-                    if ron in datos_usuario:
-                        puntuaciones = datos_usuario[ron]
-                        
-                        # Preparar datos para insertar/actualizar
-                        cata_data = {
-                            "nombre": nombre,
-                            "ron": ron,
-                            "pureza": puntuaciones.get("pureza", 0),
-                            "olfato_intensidad": puntuaciones.get("olfato_intensidad", 0),
-                            "olfato_complejidad": puntuaciones.get("olfato_complejidad", 0),
-                            "gusto_intensidad": puntuaciones.get("gusto_intensidad", 0),
-                            "gusto_complejidad": puntuaciones.get("gusto_complejidad", 0),
-                            "gusto_persistencia": puntuaciones.get("gusto_persistencia", 0),
-                            "armonia": puntuaciones.get("armonia", 0),
-                            "total": puntuaciones.get("total", 0),
-                            "timestamp": datetime.utcnow().isoformat()
-                        }
-                        
-                        if "notas" in datos_usuario and ron == RONES[-1]:
-                            cata_data["notas"] = datos_usuario["notas"]
-                        
-                        # Intentar actualizar primero
-                        response = supabase.table('catas').upsert(cata_data).execute()
-                        
-                        if not response.data:
-                            print(f"Respuesta de Supabase al guardar: {response}")
-                            raise Exception(f"No se pudo guardar los datos. Error: {getattr(response, 'error', 'Sin error explícito')}")
+                    if ron in datos_usuario and isinstance(datos_usuario[ron], dict):
+                        ron_actual = ron
+                        break
+                
+                if ron_actual is None:
+                    print(f"No se encontró ron para guardar en los datos de {nombre}")
+                    continue
+                
+                puntuaciones = datos_usuario[ron_actual]
+                
+                # Preparar datos para insertar/actualizar
+                cata_data = {
+                    "nombre": nombre,
+                    "ron": ron_actual,
+                    "pureza": puntuaciones.get("pureza", 0),
+                    "olfato_intensidad": puntuaciones.get("olfato_intensidad", 0),
+                    "olfato_complejidad": puntuaciones.get("olfato_complejidad", 0),
+                    "gusto_intensidad": puntuaciones.get("gusto_intensidad", 0),
+                    "gusto_complejidad": puntuaciones.get("gusto_complejidad", 0),
+                    "gusto_persistencia": puntuaciones.get("gusto_persistencia", 0),
+                    "armonia": puntuaciones.get("armonia", 0),
+                    "total": puntuaciones.get("total", 0),
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+                
+                if "notas" in datos_usuario and ron_actual == RONES[-1]:
+                    cata_data["notas"] = datos_usuario["notas"]
+                
+                print(f"Intentando guardar datos para {nombre}, ron {ron_actual}: {cata_data}")
+                
+                # Intentar actualizar primero
+                response = supabase.table('catas').upsert(cata_data).execute()
+                
+                if not response.data:
+                    print(f"Respuesta de Supabase al guardar: {response}")
+                    raise Exception(f"No se pudo guardar los datos para {nombre}, ron {ron_actual}")
+                
+                print(f"Datos guardados exitosamente para {nombre}, ron {ron_actual}")
             
             return  # Éxito, salir del bucle
                 
         except Exception as e:
             intento += 1
-            print(f"Error guardando datos en Supabase: {e}")
+            print(f"Error guardando datos en Supabase (intento {intento}): {e}")
             if intento == max_intentos:
                 raise
             print(f"Intento {intento} fallido, reintentando...")
@@ -167,6 +180,7 @@ def index():
             if nombre not in datos:
                 datos[nombre] = {"nombre": nombre}
             
+            # Guardar solo los datos del ron actual
             datos[nombre][ron_actual] = puntuaciones
             
             # Guardar notas si es el último paso
@@ -174,7 +188,18 @@ def index():
                 datos[nombre]["notas"] = request.form.get("notas", "")
             
             try:
-                guardar_datos(datos)
+                # Guardar solo los datos del ron actual
+                datos_a_guardar = {
+                    nombre: {
+                        "nombre": nombre,
+                        ron_actual: puntuaciones
+                    }
+                }
+                if paso_actual == len(RONES):
+                    datos_a_guardar[nombre]["notas"] = request.form.get("notas", "")
+                
+                guardar_datos(datos_a_guardar)
+                print(f"Datos guardados exitosamente para {nombre}, ron {ron_actual}")
             except Exception as e:
                 print(f"Error real al guardar: {e}")
                 return render_template("index.html", 

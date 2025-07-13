@@ -8,17 +8,21 @@
 </head>
 <body>
     <div class="container">
-        <h1>🥃 Cata Colaborativa de Ron</h1>
-        
-        <!-- Indicador de progreso -->
-        <div class="progress-bar">
-            {% for i in range(1, rones|length + 1) %}
-                <div class="step {% if i == paso_actual %}active{% elif i < paso_actual %}completed{% endif %}">
-                    Muestra {{ i }}
-                </div>
-            {% endfor %}
+        <!-- Navegación directa entre rones -->
+        <div class="ron-navigation">
+            <h3>Navegación Rápida:</h3>
+            <div class="ron-buttons">
+                {% for i in range(1, rones|length + 1) %}
+                    <button type="button" class="btn-ron {% if i == paso_actual %}active{% endif %}" 
+                            data-paso="{{ i }}" onclick="irARon(this.dataset.paso)">
+                        Muestra {{ i }}
+                    </button>
+                {% endfor %}
+            </div>
         </div>
-
+        <h1>🥃 Cata Colaborativa de Ron</h1>
+        <h2 style="text-align:center; margin-bottom: 20px;">Estás evaluando la Muestra {{ paso_actual }}</h2>
+        
         <!-- Mensajes -->
         {% if error %}
             <div class="alert error">{{ error }}</div>
@@ -71,8 +75,8 @@
                 {% if not nombre or nombre.lower() != 'pedroadmin' %}
                 <!-- Ron actual -->
                 {% set ron_actual = rones[paso_actual-1] %}
+                <!-- El título de la muestra ya está arriba, así que lo quitamos de aquí -->
                 <div class="ron-box">
-                    <h2> Evaluando Muestra {{ paso_actual }}</h2>
                     <div class="scroll-table">
                         <table>
                             <thead>
@@ -220,10 +224,100 @@
             </form>
         </div>
 
-        <!-- Resultados de todos los participantes -->
-        {% if datos %}
+        <!-- Resultados del ron actual -->
+        {% if datos and not cata_finalizada %}
         <div class="results-section">
-            <h2>📊 Resultados de Todos los Participantes</h2>
+            <h2>📊 Resultados de la Muestra {{ paso_actual }}</h2>
+            <div class="refresh-info">
+                <small>Se actualiza automáticamente cada 10 segundos</small>
+                <button onclick="actualizarResultados()" class="btn-refresh">🔄 Actualizar</button>
+                {% if nombre and nombre.lower() == 'pedroadmin' %}
+                <form method="POST" style="display: inline;">
+                    <input type="hidden" name="nombre" value="{{ nombre }}">
+                    <input type="hidden" name="paso_actual" value="{{ paso_actual }}">
+                    <button type="submit" name="accion" value="borrar_todo" class="btn-refresh" 
+                            onclick="return confirm('¿Estás seguro de que deseas eliminar TODOS los datos?')"
+                            style="background: #dc3545; margin-left: 10px;">
+                        🗑️ Borrar Todos los Datos
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+            
+            <div id="resultados-container">
+                {% set ron_actual = rones[paso_actual-1] %}
+                <div class="resultado-ron">
+                    <h3>Muestra {{ paso_actual }}</h3>
+                    <div class="tabla-responsive">
+                        <table class="resultados-tabla">
+                            <thead>
+                                <tr>
+                                    <th>Participante</th>
+                                    <th>Pureza</th>
+                                    <th>Olfato Int.</th>
+                                    <th>Olfato Comp.</th>
+                                    <th>Gusto Int.</th>
+                                    <th>Gusto Comp.</th>
+                                    <th>Persistencia</th>
+                                    <th>Armonía</th>
+                                    <th>TOTAL</th>
+                                    {% if nombre and nombre.lower() == 'pedroadmin' %}
+                                    <th>Acciones</th>
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for nombre_usuario, usuario_datos in datos.items() %}
+                                    {% if ron_actual in usuario_datos %}
+                                    <tr>
+                                        <td class="nombre-participante">{{ nombre_usuario }}</td>
+                                        <td>{{ usuario_datos[ron_actual].pureza }}</td>
+                                        <td>{{ usuario_datos[ron_actual].olfato_intensidad }}</td>
+                                        <td>{{ usuario_datos[ron_actual].olfato_complejidad }}</td>
+                                        <td>{{ usuario_datos[ron_actual].gusto_intensidad }}</td>
+                                        <td>{{ usuario_datos[ron_actual].gusto_complejidad }}</td>
+                                        <td>{{ usuario_datos[ron_actual].gusto_persistencia }}</td>
+                                        <td>{{ usuario_datos[ron_actual].armonia }}</td>
+                                        <td class="total-cell">{{ usuario_datos[ron_actual].total }}</td>
+                                        {% if nombre and nombre.lower() == 'pedroadmin' %}
+                                        <td>
+                                            <form method="POST" style="display: inline;">
+                                                <input type="hidden" name="nombre" value="{{ nombre }}">
+                                                <input type="hidden" name="paso_actual" value="{{ paso_actual }}">
+                                                <input type="hidden" name="ron_especifico" value="{{ ron_actual }}">
+                                                <input type="hidden" name="nombre_usuario" value="{{ nombre_usuario }}">
+                                                <button type="submit" name="accion" value="borrar_registro" 
+                                                        onclick="return confirm('¿Estás seguro de que deseas eliminar la puntuación de {{ nombre_usuario }} en la Muestra {{ paso_actual }}?')"
+                                                        style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                                                    🗑️
+                                                </button>
+                                            </form>
+                                        </td>
+                                        {% endif %}
+                                    </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="display: flex; justify-content: center; gap: 10px; align-items: center; margin-top: 10px;">
+                        <button class="btn-refresh" onclick="sacarPromedio('{{ ron_actual }}', this)">Sacar Promedio</button>
+                        <div id="promedio-{{ ron_actual }}" class="promedio-box" style="padding: 12px; background: #e3f2fd; border-radius: 8px; text-align: center; font-size: 1.2em; font-weight: bold; color: #1976D2;">
+                            Promedio TOTAL: <span>{{ promedios[ron_actual] }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Resultados finales cuando se completa la cata -->
+        {% if cata_finalizada and datos %}
+        <div class="results-section final-results">
+            <div class="cata-completada-banner">
+                <h2>🏆 ¡Cata Finalizada!</h2>
+                <p>Gracias por participar en la cata colaborativa de ron. Aquí están todos los resultados:</p>
+            </div>
             <div class="refresh-info">
                 <small>Se actualiza automáticamente cada 10 segundos</small>
                 <button onclick="actualizarResultados()" class="btn-refresh">🔄 Actualizar</button>

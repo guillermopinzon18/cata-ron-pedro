@@ -237,6 +237,7 @@ def index():
                                          datos=datos,
                                          nombre=nombre,
                                          success=mensaje,
+                                         cata_finalizada=False,
                                          promedios=promedios)
                 except Exception as e:
                     print(f"Error durante el borrado: {str(e)}")
@@ -249,6 +250,7 @@ def index():
                                          datos=datos,
                                          nombre=nombre,
                                          error=f"Error al eliminar datos: {str(e)}",
+                                         cata_finalizada=False,
                                          promedios=promedios)
             
             # Si es pedroadmin, no procesar el formulario normal
@@ -260,6 +262,7 @@ def index():
                                      paso_actual=paso_actual,
                                      datos=datos,
                                      nombre=nombre,
+                                     cata_finalizada=False,
                                      promedios=promedios)
             
             # Determinar el paso actual basado en la acción
@@ -282,6 +285,7 @@ def index():
                                      nombre=nombre,
                                      puntuaciones_previas=puntuaciones_previas,
                                      solo_navegacion=True,
+                                     cata_finalizada=False,
                                      promedios=promedios)
             elif accion == "navegar":
                 # Navegación directa a un ron específico
@@ -298,6 +302,7 @@ def index():
                                      nombre=nombre,
                                      puntuaciones_previas=puntuaciones_previas,
                                      solo_navegacion=True,
+                                     cata_finalizada=False,
                                      promedios=promedios)
         else:
             # Si es GET, obtener el paso de la URL
@@ -405,6 +410,7 @@ def index():
                                          datos=datos,
                                          nombre=nombre,
                                          success="¡Cata completada exitosamente! Gracias por participar.",
+                                         cata_finalizada=True,
                                          promedios=promedios)
                 
             except Exception as e:

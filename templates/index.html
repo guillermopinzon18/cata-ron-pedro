@@ -181,6 +181,19 @@
                     </div>
                 </div>
 
+                <!-- Navegación directa entre rones -->
+                <div class="ron-navigation">
+                    <h3>Navegación Rápida:</h3>
+                    <div class="ron-buttons">
+                        {% for i in range(1, rones|length + 1) %}
+                            <button type="button" class="btn-ron {% if i == paso_actual %}active{% endif %}" 
+                                    data-paso="{{ i }}" onclick="irARon(this.dataset.paso)">
+                                Muestra {{ i }}
+                            </button>
+                        {% endfor %}
+                    </div>
+                </div>
+
                 <!-- Botones de navegación -->
                 <div class="navigation-buttons">
                     {% if paso_actual > 1 %}
@@ -188,6 +201,10 @@
                             ← Anterior
                         </button>
                     {% endif %}
+                    
+                    <button type="submit" name="accion" value="guardar" class="btn-primary">
+                        💾 Guardar
+                    </button>
                     
                     {% if paso_actual < rones|length %}
                         <button type="submit" name="accion" value="siguiente" class="btn-primary">
@@ -335,6 +352,20 @@
             input.type = 'hidden';
             input.name = 'accion';
             input.value = 'anterior';
+            form.appendChild(input);
+            form.noValidate = true;
+            form.submit();
+        }
+
+        function irARon(paso) {
+            const form = document.querySelector('form');
+            const pasoInput = form.querySelector('input[name="paso_actual"]');
+            pasoInput.value = parseInt(paso);
+            
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'accion';
+            input.value = 'navegar';
             form.appendChild(input);
             form.noValidate = true;
             form.submit();

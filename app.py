@@ -283,6 +283,22 @@ def index():
                                      puntuaciones_previas=puntuaciones_previas,
                                      solo_navegacion=True,
                                      promedios=promedios)
+            elif accion == "navegar":
+                # Navegación directa a un ron específico
+                # Cargar los datos previos del usuario si existen
+                puntuaciones_previas = {}
+                if nombre in datos and RONES[paso_actual-1] in datos[nombre]:
+                    puntuaciones_previas = datos[nombre][RONES[paso_actual-1]]
+                
+                return render_template("index.html", 
+                                     puntajes=PUNTAJES, 
+                                     rones=RONES, 
+                                     paso_actual=paso_actual,
+                                     datos=datos,
+                                     nombre=nombre,
+                                     puntuaciones_previas=puntuaciones_previas,
+                                     solo_navegacion=True,
+                                     promedios=promedios)
         else:
             # Si es GET, obtener el paso de la URL
             paso_actual = int(request.args.get('paso', 1))
@@ -299,7 +315,7 @@ def index():
         elif paso_actual > len(RONES):
             paso_actual = len(RONES)
     
-        if request.method == "POST" and accion not in ["anterior"]:  # Solo validar campos si no es "anterior"
+        if request.method == "POST" and accion not in ["anterior", "navegar"]:  # Solo validar campos si no es navegación
             if not nombre:
                 return render_template("index.html", 
                                      puntajes=PUNTAJES, 
@@ -361,7 +377,16 @@ def index():
                 
                 # Determinar siguiente acción después de guardar exitosamente
                 accion = request.form.get("accion", "")
-                if accion == "siguiente" and paso_actual < len(RONES):
+                if accion == "guardar":
+                    return render_template("index.html", 
+                                         puntajes=PUNTAJES, 
+                                         rones=RONES, 
+                                         paso_actual=paso_actual,
+                                         datos=datos,
+                                         nombre=nombre,
+                                         success=f"Muestra {paso_actual} guardada correctamente",
+                                         promedios=promedios)
+                elif accion == "siguiente" and paso_actual < len(RONES):
                     # Incrementar el paso solo después de guardar exitosamente
                     siguiente_paso = paso_actual + 1
                     return render_template("index.html", 

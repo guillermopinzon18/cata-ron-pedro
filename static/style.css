@@ -216,6 +216,55 @@ select[required]:invalid {
     outline: none;
 }
 
+/* Navegación de rones */
+.ron-navigation {
+    background: linear-gradient(45deg, #f8f9fa, #e9ecef);
+    padding: 20px;
+    border-radius: 10px;
+    margin: 20px 0;
+    border: 2px solid #dee2e6;
+}
+
+.ron-navigation h3 {
+    text-align: center;
+    margin: 0 0 15px 0;
+    color: #495057;
+    font-size: 1.2em;
+}
+
+.ron-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-ron {
+    padding: 10px 20px;
+    border: 2px solid #6c757d;
+    background: #fff;
+    color: #6c757d;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    font-size: 0.9em;
+}
+
+.btn-ron:hover {
+    background: #6c757d;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.btn-ron.active {
+    background: linear-gradient(45deg, #4CAF50, #45a049);
+    color: white;
+    border-color: #4CAF50;
+    transform: scale(1.05);
+}
+
 /* Botones de navegación */
 .navigation-buttons {
     display: flex;
@@ -385,6 +434,19 @@ select[required]:invalid {
         padding: 15px;
     }
     
+    .ron-navigation {
+        padding: 15px;
+    }
+    
+    .ron-buttons {
+        gap: 8px;
+    }
+    
+    .btn-ron {
+        padding: 8px 15px;
+        font-size: 0.8em;
+    }
+    
     .navigation-buttons {
         flex-direction: column;
         align-items: center;
@@ -431,6 +493,19 @@ select[required]:invalid {
     
     .ron-box, .evaluador-info, .notas {
         padding: 15px;
+    }
+    
+    .ron-navigation {
+        padding: 10px;
+    }
+    
+    .ron-buttons {
+        gap: 5px;
+    }
+    
+    .btn-ron {
+        padding: 6px 12px;
+        font-size: 0.75em;
     }
     
     .navigation-buttons {

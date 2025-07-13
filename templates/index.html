@@ -31,6 +31,7 @@
         {% endif %}
 
         <!-- Formulario principal -->
+        {% if not cata_finalizada %}
         <div class="form-section">
             <form method="POST">
                 <!-- Campo oculto para el paso actual -->
@@ -210,11 +211,7 @@
                         💾 Guardar
                     </button>
                     
-                    {% if paso_actual < rones|length %}
-                        <button type="submit" name="accion" value="siguiente" class="btn-primary">
-                            Guardar y Continuar →
-                        </button>
-                    {% else %}
+                    {% if paso_actual == rones|length %}
                         <button type="submit" name="accion" value="finalizar" class="btn-success">
                             🏁 Finalizar Cata
                         </button>
@@ -223,13 +220,14 @@
                 {% endif %}
             </form>
         </div>
+        {% endif %}
 
         <!-- Resultados del ron actual -->
         {% if datos and not cata_finalizada %}
         <div class="results-section">
             <h2>📊 Resultados de la Muestra {{ paso_actual }}</h2>
             <div class="refresh-info">
-                <small>Se actualiza automáticamente cada 10 segundos</small>
+                <small>Haz clic en "Actualizar" para ver los últimos resultados</small>
                 <button onclick="actualizarResultados()" class="btn-refresh">🔄 Actualizar</button>
                 {% if nombre and nombre.lower() == 'pedroadmin' %}
                 <form method="POST" style="display: inline;">
@@ -319,7 +317,7 @@
                 <p>Gracias por participar en la cata colaborativa de ron. Aquí están todos los resultados:</p>
             </div>
             <div class="refresh-info">
-                <small>Se actualiza automáticamente cada 10 segundos</small>
+                <small>Haz clic en "Actualizar" para ver los últimos resultados</small>
                 <button onclick="actualizarResultados()" class="btn-refresh">🔄 Actualizar</button>
                 {% if nombre and nombre.lower() == 'pedroadmin' %}
                 <form method="POST" style="display: inline;">
@@ -403,22 +401,25 @@
         {% endif %}
     </div>
 
-    <!-- JavaScript para actualización automática -->
+    <!-- JavaScript -->
     <script>
-        // Actualizar resultados automáticamente cada 10 segundos
-        setInterval(actualizarResultados, 10000);
         
         function actualizarResultados() {
-            fetch('/resultados')
-                .then(response => response.json())
-                .then(datos => {
-                    if (Object.keys(datos).length > 0) {
-                        console.log('Datos actualizados:', datos);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error al actualizar resultados:', error);
-                });
+            // Recargar la página manteniendo el paso actual y el nombre
+            const urlParams = new URLSearchParams(window.location.search);
+            const paso = urlParams.get('paso') || document.querySelector('input[name="paso_actual"]').value;
+            const nombre = urlParams.get('nombre') || document.querySelector('input[name="nombre"]').value;
+            
+            let newUrl = window.location.pathname;
+            const params = [];
+            if (paso) params.push(`paso=${paso}`);
+            if (nombre) params.push(`nombre=${encodeURIComponent(nombre)}`);
+            
+            if (params.length > 0) {
+                newUrl += '?' + params.join('&');
+            }
+            
+            window.location.href = newUrl;
         }
         
         // Prevenir pérdida de datos al navegar

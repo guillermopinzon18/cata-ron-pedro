@@ -383,14 +383,29 @@ def index():
                 # Determinar siguiente acción después de guardar exitosamente
                 accion = request.form.get("accion", "")
                 if accion == "guardar":
-                    return render_template("index.html", 
-                                         puntajes=PUNTAJES, 
-                                         rones=RONES, 
-                                         paso_actual=paso_actual,
-                                         datos=datos,
-                                         nombre=nombre,
-                                         success=f"Muestra {paso_actual} guardada correctamente",
-                                         promedios=promedios)
+                    # Pasar al siguiente ron después de guardar
+                    if paso_actual < len(RONES):
+                        siguiente_paso = paso_actual + 1
+                        return render_template("index.html", 
+                                             puntajes=PUNTAJES, 
+                                             rones=RONES, 
+                                             paso_actual=siguiente_paso,
+                                             datos=datos,
+                                             nombre=nombre,
+                                             success=f"Muestra {paso_actual} guardada correctamente",
+                                             cata_finalizada=False,
+                                             promedios=promedios)
+                    else:
+                        # Si es el último ron, finalizar la cata
+                        return render_template("index.html", 
+                                             puntajes=PUNTAJES, 
+                                             rones=RONES, 
+                                             paso_actual=paso_actual,
+                                             datos=datos,
+                                             nombre=nombre,
+                                             success="¡Cata completada exitosamente! Gracias por participar.",
+                                             cata_finalizada=True,
+                                             promedios=promedios)
                 elif accion == "siguiente" and paso_actual < len(RONES):
                     # Incrementar el paso solo después de guardar exitosamente
                     siguiente_paso = paso_actual + 1

@@ -222,10 +222,10 @@
         </div>
         {% endif %}
 
-        <!-- Resultados del ron actual -->
+        <!-- Resultados del ron anterior y actual -->
         {% if datos and not cata_finalizada %}
         <div class="results-section">
-            <h2>📊 Resultados de la Muestra {{ paso_actual }}</h2>
+            <h2>📊 Resultados de las Muestras</h2>
             <div class="refresh-info">
                 <small>Haz clic en "Actualizar" para ver los últimos resultados</small>
                 <button onclick="actualizarResultados()" class="btn-refresh">🔄 Actualizar</button>
@@ -243,9 +243,76 @@
             </div>
             
             <div id="resultados-container">
+                <!-- Mostrar ron anterior si existe -->
+                {% if paso_actual > 1 %}
+                    {% set ron_anterior = rones[paso_actual-2] %}
+                    <div class="resultado-ron">
+                        <h3>Muestra {{ paso_actual - 1 }} (Anterior)</h3>
+                        <div class="tabla-responsive">
+                            <table class="resultados-tabla">
+                                <thead>
+                                    <tr>
+                                        <th>Participante</th>
+                                        <th>Pureza</th>
+                                        <th>Olfato Int.</th>
+                                        <th>Olfato Comp.</th>
+                                        <th>Gusto Int.</th>
+                                        <th>Gusto Comp.</th>
+                                        <th>Persistencia</th>
+                                        <th>Armonía</th>
+                                        <th>TOTAL</th>
+                                        {% if nombre and nombre.lower() == 'pedroadmin' %}
+                                        <th>Acciones</th>
+                                        {% endif %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for nombre_usuario, usuario_datos in datos.items() %}
+                                        {% if ron_anterior in usuario_datos %}
+                                        <tr>
+                                            <td class="nombre-participante">{{ nombre_usuario }}</td>
+                                            <td>{{ usuario_datos[ron_anterior].pureza }}</td>
+                                            <td>{{ usuario_datos[ron_anterior].olfato_intensidad }}</td>
+                                            <td>{{ usuario_datos[ron_anterior].olfato_complejidad }}</td>
+                                            <td>{{ usuario_datos[ron_anterior].gusto_intensidad }}</td>
+                                            <td>{{ usuario_datos[ron_anterior].gusto_complejidad }}</td>
+                                            <td>{{ usuario_datos[ron_anterior].gusto_persistencia }}</td>
+                                            <td>{{ usuario_datos[ron_anterior].armonia }}</td>
+                                            <td class="total-cell">{{ usuario_datos[ron_anterior].total }}</td>
+                                            {% if nombre and nombre.lower() == 'pedroadmin' %}
+                                            <td>
+                                                <form method="POST" style="display: inline;">
+                                                    <input type="hidden" name="nombre" value="{{ nombre }}">
+                                                    <input type="hidden" name="paso_actual" value="{{ paso_actual }}">
+                                                    <input type="hidden" name="ron_especifico" value="{{ ron_anterior }}">
+                                                    <input type="hidden" name="nombre_usuario" value="{{ nombre_usuario }}">
+                                                    <button type="submit" name="accion" value="borrar_registro" 
+                                                            onclick="return confirm('¿Estás seguro de que deseas eliminar la puntuación de {{ nombre_usuario }} en la Muestra {{ paso_actual - 1 }}?')"
+                                                            style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                                                        🗑️
+                                                    </button>
+                                                </form>
+                                            </td>
+                                            {% endif %}
+                                        </tr>
+                                        {% endif %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style="display: flex; justify-content: center; gap: 10px; align-items: center; margin-top: 10px;">
+                            <button class="btn-refresh" onclick="sacarPromedio('{{ ron_anterior }}', this)">Sacar Promedio</button>
+                            <div id="promedio-{{ ron_anterior }}" class="promedio-box" style="padding: 12px; background: #e3f2fd; border-radius: 8px; text-align: center; font-size: 1.2em; font-weight: bold; color: #1976D2;">
+                                Promedio TOTAL: <span>{{ promedios[ron_anterior] }}</span>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <!-- Mostrar ron actual -->
                 {% set ron_actual = rones[paso_actual-1] %}
                 <div class="resultado-ron">
-                    <h3>Muestra {{ paso_actual }}</h3>
+                    <h3>Muestra {{ paso_actual }} (Actual)</h3>
                     <div class="tabla-responsive">
                         <table class="resultados-tabla">
                             <thead>

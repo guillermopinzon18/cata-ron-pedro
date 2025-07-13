@@ -24,8 +24,8 @@ PUNTAJES = {
     "pureza": [10, 8, 6, 4, 2],
     "olfato_intensidad": [10, 8, 6, 4, 2],
     "olfato_complejidad": [25, 20, 16, 10, 5],
-    "gusto_intensidad": [20, 18, 16, 8, 4],
-    "gusto_complejidad": [10, 8, 6, 4, 2],
+    "gusto_intensidad": [10, 8, 6, 4, 2],
+    "gusto_complejidad": [20, 18, 16, 8, 4],
     "gusto_persistencia": [15, 12, 10, 6, 3],
     "armonia": [10, 8, 6, 4, 2]
 }
